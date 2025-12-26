@@ -87,16 +87,18 @@ def download_fp8_model(model_dir: str = "./models"):
 
 
 def load_pipeline_fp8(device: str = "cuda"):
-    """Load the FP8 quantized pipeline from 1038lab."""
+    """Load the FP8 quantized pipeline by replacing transformer weights."""
     from diffusers import QwenImageEditPlusPipeline, FlowMatchEulerDiscreteScheduler
+    from diffusers.models import QwenImageTransformer2DModel
     
-    # Use pre-quantized FP8 model
-    model_id = "1038lab/Qwen-Image-Edit-2511-FP8"
+    base_model_id = "Qwen/Qwen-Image-Edit-2511"
+    fp8_model_id = "drbaph/Qwen-Image-Edit-2511-FP8"
     
     print("\n" + "=" * 60)
     print("🚀 Loading Qwen-Image-Edit-2511 FP8 Pipeline")
     print("=" * 60)
-    print(f"Model: {model_id}")
+    print(f"Base Model: {base_model_id}")
+    print(f"FP8 Transformer: {fp8_model_id}")
     print(f"Expected VRAM: ~20-22GB (50% less than BF16)")
     print("-" * 60)
     
@@ -127,10 +129,19 @@ def load_pipeline_fp8(device: str = "cuda"):
     }
     scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
     
-    # Load the FP8 quantized pipeline directly
-    print("Loading FP8 quantized pipeline...")
+    # Load FP8 transformer separately
+    print("Loading FP8 quantized transformer...")
+    transformer = QwenImageTransformer2DModel.from_pretrained(
+        fp8_model_id,
+        subfolder="transformer",
+        torch_dtype=torch.bfloat16,
+    )
+    
+    # Load the pipeline with FP8 transformer
+    print("Loading full pipeline with FP8 transformer...")
     pipeline = QwenImageEditPlusPipeline.from_pretrained(
-        model_id,
+        base_model_id,
+        transformer=transformer,
         scheduler=scheduler,
         torch_dtype=torch.bfloat16,
         device_map="balanced",
