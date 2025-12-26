@@ -39,9 +39,13 @@ Thumbs.db
 
 # Test outputs
 output_image*.png
+vton_output*.png
 test_input.png
+sample_input.png
 *.jpg
 *.jpeg
+!person.jpg
+!cloth.png
 !samples/*.jpg
 !samples/*.png
 
