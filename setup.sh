@@ -32,10 +32,15 @@ echo ""
 echo "🔧 Installing diffusers from GitHub (latest version required)..."
 pip install git+https://github.com/huggingface/diffusers
 
+# Install transformers from git (required for huggingface-hub 1.x compatibility)
+echo ""
+echo "🔧 Installing transformers from GitHub (for huggingface-hub 1.x support)..."
+pip install git+https://github.com/huggingface/transformers
+
 # Install other requirements
 echo ""
 echo "🔧 Installing other dependencies..."
-pip install -r requirements.txt --ignore-installed
+pip install -r requirements.txt
 
 # Verify installation
 echo ""
