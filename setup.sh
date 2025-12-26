@@ -22,22 +22,26 @@ echo ""
 echo "📦 Upgrading pip..."
 pip install --upgrade pip
 
-# Install PyTorch 2.5.1 with CUDA 12.4 support (stable version compatible with diffusers)
-# Note: PyTorch 2.9 has JIT compilation issues with diffusers QwenImage models
+# Install PyTorch 2.6.0 with CUDA 12.4 support
+# Note: PyTorch 2.9 has JIT issues, 2.5.1 is too old for latest transformers
 echo ""
-echo "🔧 Installing PyTorch 2.5.1 with CUDA 12.4 support..."
-echo "   (Using 2.5.1 instead of 2.9 to avoid JIT compilation errors)"
-pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
+echo "🔧 Installing PyTorch 2.6.0 with CUDA 12.4 support..."
+pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
 
-# Install diffusers from git (required for QwenImageEditPlusPipeline)
+# Install compatible xformers for torch 2.6.0
 echo ""
-echo "🔧 Installing diffusers from GitHub (latest version required)..."
+echo "🔧 Installing xformers for PyTorch 2.6.0..."
+pip install xformers==0.0.29.post3
+
+# Install diffusers from a specific commit that works well
+echo ""
+echo "🔧 Installing diffusers from GitHub..."
 pip install git+https://github.com/huggingface/diffusers
 
-# Install transformers from git (required for huggingface-hub 1.x compatibility)
+# Install transformers - use a stable version compatible with PyTorch 2.6
 echo ""
-echo "🔧 Installing transformers from GitHub (for huggingface-hub 1.x support)..."
-pip install git+https://github.com/huggingface/transformers
+echo "🔧 Installing transformers..."
+pip install transformers>=4.51.3
 
 # Install other requirements
 echo ""
@@ -47,7 +51,7 @@ pip install -r requirements.txt
 # Verify installation
 echo ""
 echo "✅ Verifying installation..."
-python3 -c "
+python3 << 'EOF'
 import torch
 print(f'PyTorch version: {torch.__version__}')
 print(f'CUDA available: {torch.cuda.is_available()}')
@@ -73,7 +77,7 @@ print('✅ QwenImageTransformer2DModel is available!')
 # Check for key components
 from diffusers import FlowMatchEulerDiscreteScheduler
 print('✅ FlowMatchEulerDiscreteScheduler is available!')
-"
+EOF
 
 echo ""
 echo "========================================"
