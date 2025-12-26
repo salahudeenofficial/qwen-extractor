@@ -13,6 +13,7 @@ torchaudio==2.6.0
 transformers>=4.51.3
 accelerate>=0.30.0
 safetensors>=0.4.0
+peft>=0.10.0  # Required for LoRA loading
 
 # Image Processing
 Pillow>=10.0.0
