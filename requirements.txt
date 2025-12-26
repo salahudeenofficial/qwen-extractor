@@ -27,8 +27,9 @@ tqdm>=4.66.0
 einops>=0.7.0
 requests>=2.31.0
 
-# Optional: For better performance
-xformers>=0.0.27
+# Optional: xformers (skip - has strict PyTorch version requirements)
+# Install manually if needed: pip install xformers==0.0.28.post3
+# xformers>=0.0.27
 
 # Sentencepiece for tokenizers
 sentencepiece>=0.2.0
