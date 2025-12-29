@@ -80,8 +80,12 @@ def check_cuda():
     return True
 
 
-def load_pipeline_optimized(device: str = "cuda", use_compile: bool = True):
-    """Load the optimized pipeline with torch.compile and other optimizations."""
+def load_pipeline_optimized(device: str = "cuda"):
+    """Load the optimized pipeline with practical speed optimizations.
+    
+    Note: torch.compile doesn't work with QwenImageTransformer due to dynamic
+    position embeddings. We focus on other optimizations instead.
+    """
     from diffusers import QwenImageEditPlusPipeline, FlowMatchEulerDiscreteScheduler
     from huggingface_hub import hf_hub_download
     
@@ -94,7 +98,6 @@ def load_pipeline_optimized(device: str = "cuda", use_compile: bool = True):
     print("=" * 60)
     print(f"Model: {model_id}")
     print(f"Lightning LoRA: {lora_repo}")
-    print(f"torch.compile: {use_compile}")
     print("-" * 60)
     
     # Clear GPU memory
@@ -124,14 +127,25 @@ def load_pipeline_optimized(device: str = "cuda", use_compile: bool = True):
     }
     scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
     
-    # Load pipeline with device_map for memory efficiency
-    print("Loading pipeline with device_map='balanced'...")
-    pipeline = QwenImageEditPlusPipeline.from_pretrained(
-        model_id,
-        scheduler=scheduler,
-        torch_dtype=torch.bfloat16,
-        device_map="balanced",  # Distribute across GPU efficiently
-    )
+    # Check GPU memory to decide loading strategy
+    gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
+    print(f"GPU Memory: {gpu_memory:.2f} GB")
+    
+    if gpu_memory >= 60:  # A100 80GB or similar
+        print("Using direct CUDA loading (high memory GPU)...")
+        pipeline = QwenImageEditPlusPipeline.from_pretrained(
+            model_id,
+            scheduler=scheduler,
+            torch_dtype=torch.bfloat16,
+        ).to(device)
+    else:
+        print("Using device_map='balanced' (memory efficient)...")
+        pipeline = QwenImageEditPlusPipeline.from_pretrained(
+            model_id,
+            scheduler=scheduler,
+            torch_dtype=torch.bfloat16,
+            device_map="balanced",
+        )
     
     # Load Lightning LoRA
     print("Downloading Lightning LoRA (4-step)...")
@@ -142,37 +156,6 @@ def load_pipeline_optimized(device: str = "cuda", use_compile: bool = True):
     print(f"Loading LoRA from: {lora_path}")
     pipeline.load_lora_weights(lora_path)
     print("✅ Lightning LoRA loaded!")
-    
-    # Apply torch.compile to transformer for faster inference
-    # Note: QwenImageTransformer has dynamic position embeddings that may not compile well
-    if use_compile:
-        print("Applying torch.compile to transformer...")
-        # Suppress dynamo errors and fall back to eager if needed
-        try:
-            import torch._dynamo as dynamo
-            dynamo.config.suppress_errors = True
-        except Exception:
-            pass
-        
-        try:
-            # Use "default" mode which is more compatible than reduce-overhead
-            pipeline.transformer = torch.compile(
-                pipeline.transformer,
-                mode="default",  # More compatible than reduce-overhead
-                fullgraph=False,  # Allow graph breaks for compatibility
-                dynamic=True,  # Enable dynamic shapes
-            )
-            print("✅ torch.compile applied (with fallback to eager on errors)")
-        except Exception as e:
-            print(f"⚠️ torch.compile failed, using uncompiled model: {e}")
-    
-    # Try to enable fused QKV projections if available
-    try:
-        if hasattr(pipeline, 'fuse_qkv_projections'):
-            pipeline.fuse_qkv_projections()
-            print("✅ Fused QKV projections enabled!")
-    except Exception as e:
-        print(f"⚠️ QKV fusion not supported: {e}")
     
     print(f"✅ Pipeline loaded in {time.time() - start_time:.2f} seconds")
     
@@ -187,35 +170,6 @@ def load_pipeline_optimized(device: str = "cuda", use_compile: bool = True):
     print("=" * 60)
     return pipeline
 
-
-def warmup_pipeline(pipeline, warmup_runs: int = 1):
-    """Warm up the pipeline to trigger JIT compilation."""
-    print("\n" + "=" * 60)
-    print("🔥 Warming up pipeline (JIT compilation)...")
-    print("=" * 60)
-    
-    # Create a small dummy image for warmup
-    dummy_img = Image.new('RGB', (512, 512), color='white')
-    
-    for i in range(warmup_runs):
-        print(f"   Warmup run {i+1}/{warmup_runs}...")
-        with torch.inference_mode():
-            try:
-                _ = pipeline(
-                    image=[dummy_img],
-                    prompt="test",
-                    num_inference_steps=1,
-                    generator=torch.Generator(device="cuda").manual_seed(0),
-                )
-            except Exception as e:
-                print(f"   Warmup run {i+1} completed with note: {type(e).__name__}")
-    
-    # Clear any cached memory from warmup
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-    
-    print("✅ Warmup complete! Future runs will be faster.")
-    print("=" * 60)
 
 
 def run_inference(pipeline, 
@@ -283,20 +237,15 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 OPTIMIZED for speed with:
-- torch.compile (reduce-overhead mode)
-- TF32 precision for faster matmul
-- cuDNN benchmark mode
-- Fused QKV projections
+- TF32 precision for faster matmul (Ampere+ GPUs)
+- cuDNN benchmark mode for optimized kernels
+- Smart GPU loading (direct CUDA for large GPUs, device_map for smaller)
+- Lightning LoRA for 4-step inference
+
+Note: torch.compile doesn't work with this model due to dynamic position embeddings.
 
 Examples:
-    # Standard optimized run
     python test_qwen_optimized.py --person person.jpg --cloth cloth.png
-    
-    # Skip torch.compile (faster startup, slower inference)
-    python test_qwen_optimized.py --person person.jpg --cloth cloth.png --no-compile
-    
-    # Skip warmup
-    python test_qwen_optimized.py --person person.jpg --cloth cloth.png --no-warmup
         """
     )
     parser.add_argument("--person", "-p", type=str, required=True,
@@ -313,10 +262,6 @@ Examples:
                         help="True CFG scale (default: 1.0)")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed")
-    parser.add_argument("--no-compile", action="store_true",
-                        help="Disable torch.compile (faster startup)")
-    parser.add_argument("--no-warmup", action="store_true",
-                        help="Skip warmup run")
     
     args = parser.parse_args()
     
@@ -332,7 +277,7 @@ Examples:
     
     print("\n" + "🚀" * 30)
     print("   QWEN VIRTUAL TRY-ON (OPTIMIZED)")
-    print("   Lightning LoRA + torch.compile")
+    print("   Lightning LoRA + TF32 + cuDNN")
     print("🚀" * 30 + "\n")
     
     # Setup optimizations first
@@ -357,13 +302,7 @@ Examples:
     print(f"   Cloth image: {cloth_img.size}")
     
     # Load optimized pipeline
-    pipeline = load_pipeline_optimized(
-        use_compile=not args.no_compile,
-    )
-    
-    # Warmup run (triggers JIT compilation)
-    if not args.no_warmup and not args.no_compile:
-        warmup_pipeline(pipeline, warmup_runs=1)
+    pipeline = load_pipeline_optimized()
     
     # Run inference with both images
     output_image, inference_time = run_inference(
@@ -379,7 +318,7 @@ Examples:
     print("\n" + "✅" * 30)
     print("   VIRTUAL TRY-ON COMPLETED!")
     print(f"   Inference time: {inference_time:.2f} seconds")
-    print("   Using: Lightning LoRA + torch.compile")
+    print("   Using: Lightning LoRA + TF32 + cuDNN")
     print("✅" * 30 + "\n")
     
     return 0
