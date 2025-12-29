@@ -124,12 +124,13 @@ def load_pipeline_optimized(device: str = "cuda", use_compile: bool = True):
     }
     scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
     
-    # Load pipeline
-    print("Loading pipeline...")
+    # Load pipeline with device_map for memory efficiency
+    print("Loading pipeline with device_map='balanced'...")
     pipeline = QwenImageEditPlusPipeline.from_pretrained(
         model_id,
         scheduler=scheduler,
         torch_dtype=torch.bfloat16,
+        device_map="balanced",  # Distribute across GPU efficiently
     )
     
     # Load Lightning LoRA
@@ -141,10 +142,6 @@ def load_pipeline_optimized(device: str = "cuda", use_compile: bool = True):
     print(f"Loading LoRA from: {lora_path}")
     pipeline.load_lora_weights(lora_path)
     print("✅ Lightning LoRA loaded!")
-    
-    # Move to GPU
-    print("Moving to GPU...")
-    pipeline.to(device)
     
     # Apply torch.compile to transformer for faster inference
     if use_compile:
