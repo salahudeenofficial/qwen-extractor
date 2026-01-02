@@ -227,14 +227,21 @@ def run_lightx2v_vton(
         steps = 40
         print("\n⚠️ Using base model (40 steps, slower)")
     
-    # Determine attention mode
+    # Determine attention mode (don't import flash_attn directly - it may be broken)
+    # LightX2V will handle the fallback internally
+    attn_mode = "sdpa"  # Safe default
+    
+    # Check if flash_attn is available and working
     try:
-        import flash_attn
-        attn_mode = "flash_attn3"
-        print(f"\n🔧 Using Flash Attention 3")
-    except ImportError:
+        import importlib.util
+        if importlib.util.find_spec("flash_attn") is not None:
+            # Check if it actually loads without error
+            import flash_attn
+            attn_mode = "flash_attn2"  # or "flash_attn3" if available
+            print(f"\n🔧 Using Flash Attention")
+    except Exception as e:
+        print(f"\n🔧 Flash Attention unavailable ({type(e).__name__}), using SDPA")
         attn_mode = "sdpa"
-        print(f"\n🔧 Using SDPA (Flash Attention not available)")
     
     # Create generator
     print(f"\n🔧 Creating generator (steps={steps})...")
