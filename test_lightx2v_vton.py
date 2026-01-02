@@ -289,8 +289,8 @@ def run_lightx2v_vton(
         auto_resize=False,  # Disable auto-resize, use our calculated resolution
         infer_steps=steps,
         guidance_scale=1.0,
-        target_width=target_width,
-        target_height=target_height,
+        width=target_width,
+        height=target_height,
     )
     
     init_time = time.time() - start_time
