@@ -2,6 +2,40 @@
 
 Run **Qwen-Image-Edit-2511** with the **4-Step Lightning LoRA** for ~10x faster inference on Vast.ai GPU instances.
 
+## 📦 FP8 Quantization Options
+
+This repository includes several FP8 quantization approaches for reduced VRAM usage:
+
+### Option 1: FP8 Layerwise Casting (Recommended)
+```bash
+python test_qwen_edit_fp8_layerwise.py --mode layerwise --input your_image.png
+```
+- Stores weights in FP8, computes in BF16
+- ~50% VRAM reduction (15-20GB instead of 25-35GB)
+- Works on most GPUs
+
+### Option 2: TorchAO FP8 (RTX 4000+/A100/H100)
+```bash
+python test_qwen_edit_fp8_layerwise.py --mode torchao --input your_image.png
+```
+- Hardware-accelerated FP8 quantization
+- Requires GPU with compute capability ≥ 8.9
+- Best speed/memory/quality trade-off
+
+### Option 3: 1038lab FP8 Model (Pre-quantized)
+```python
+from diffusers import QwenImageEditPipeline
+pipe = QwenImageEditPipeline.from_pretrained(
+    "1038lab/Qwen-Image-Edit-2511-FP8", torch_dtype=torch.bfloat16
+).to("cuda")
+```
+
+### ComfyUI FP8 Weights Compatibility
+⚠️ **Note**: ComfyUI FP8 weights (e.g., `qwen_image_edit_2511_fp8_e4m3fn_scaled.safetensors`) have different naming conventions and aren't directly compatible with diffusers. Use the converter script:
+```bash
+python convert_comfy_fp8.py --input comfy_weights.safetensors --analyze-only
+```
+
 ## 🚀 Key Features
 
 | Feature | Description |
