@@ -292,10 +292,11 @@ def run_lightx2v_vton(
     if enable_teacache:
         print(f"\n⚡ Enabling TeaCache (threshold={teacache_thresh}) for ~1.5-2x speedup...")
         try:
-            # LightX2V uses enable_cache method
+            # LightX2V uses enable_cache with cache_method="Tea"
             pipe.enable_cache(
-                cache_type="teacache",
+                cache_method="Tea",  # "Tea" for TeaCache, "Mag" for MagCache
                 teacache_thresh=teacache_thresh,
+                use_ret_steps=False,
             )
             print("✅ TeaCache enabled")
         except Exception as e:
@@ -321,15 +322,14 @@ def run_lightx2v_vton(
     
     # Optional: Enable torch.compile for additional speedup
     # Note: First inference will be slow due to compilation
-    if hasattr(pipe, 'runner') and hasattr(pipe.runner, 'model'):
-        try:
-            if not getattr(pipe.runner.model, '_compiled', False):
-                print("⚡ Enabling torch.compile for transformer...")
-                pipe.runner.model = torch.compile(pipe.runner.model, mode="reduce-overhead")
-                pipe.runner.model._compiled = True
-                print("✅ torch.compile enabled (first run will be slower)")
-        except Exception as e:
-            print(f"⚠️ torch.compile not available: {e}")
+    try:
+        # Use LightX2V's built-in enable_compile method
+        if hasattr(pipe, 'enable_compile'):
+            print("⚡ Enabling torch.compile...")
+            pipe.enable_compile()
+            print("✅ torch.compile enabled (first run will be slower)")
+    except Exception as e:
+        print(f"⚠️ torch.compile not available: {e}")
     
     init_time = time.time() - start_time
     print(f"✅ Pipeline initialized in {init_time:.2f} seconds")
