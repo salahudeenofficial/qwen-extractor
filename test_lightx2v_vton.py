@@ -320,16 +320,8 @@ def run_lightx2v_vton(
         height=target_height,
     )
     
-    # Optional: Enable torch.compile for additional speedup
-    # Note: First inference will be slow due to compilation
-    try:
-        # Use LightX2V's built-in enable_compile method
-        if hasattr(pipe, 'enable_compile'):
-            print("⚡ Enabling torch.compile...")
-            pipe.enable_compile()
-            print("✅ torch.compile enabled (first run will be slower)")
-    except Exception as e:
-        print(f"⚠️ torch.compile not available: {e}")
+    # Note: torch.compile via enable_compile() is not compatible with Qwen Image model
+    # The compiled inference class doesn't exist for this model type
     
     init_time = time.time() - start_time
     print(f"✅ Pipeline initialized in {init_time:.2f} seconds")
