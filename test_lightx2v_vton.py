@@ -539,9 +539,9 @@ Examples:
                         choices=["480p", "720p", "1080p", "auto"],
                         help="Target resolution preset (default: 720p)")
     parser.add_argument("--teacache", action="store_true",
-                        help="Enable TeaCache for ~1.5-2x faster inference (slight quality trade-off)")
-    parser.add_argument("--teacache-thresh", type=float, default=0.26,
-                        help="TeaCache threshold (lower = faster, default: 0.26)")
+                        help="Enable TeaCache for faster inference (quality trade-off)")
+    parser.add_argument("--teacache-thresh", type=float, default=0.08,
+                        help="TeaCache threshold (lower = better quality, default: 0.08)")
     parser.add_argument("--warmup", action="store_true",
                         help="Run warmup inference before timing")
     

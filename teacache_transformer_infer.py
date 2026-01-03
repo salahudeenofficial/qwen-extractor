@@ -29,7 +29,9 @@ class QwenImageTeaCacheTransformerInfer(QwenImageTransformerInfer):
         super().__init__(config)
         
         # TeaCache parameters
-        self.teacache_thresh = config.get("teacache_thresh", 0.15)
+        # Lower threshold = more conservative (better quality, less speedup)
+        # For 4-step distillation, use very low threshold
+        self.teacache_thresh = config.get("teacache_thresh", 0.08)  # More conservative
         
         # Accumulated L1 distance
         self.accumulated_rel_l1_distance = 0
@@ -41,18 +43,23 @@ class QwenImageTeaCacheTransformerInfer(QwenImageTransformerInfer):
         self.previous_residual = None
         
         # Rescaling coefficients - calibrated for image generation
-        # For 4-step distillation, linear scaling works well
-        self.coefficients = config.get("coefficients", [1.0])
+        # Lower coefficient = more likely to recalculate
+        self.coefficients = config.get("coefficients", [0.5])  # More conservative
         
-        # Steps to always calculate (first and last)
-        # For 4-step: steps 0,1,2,3 -> always calc 0 and 3
-        self.use_ret_steps = config.get("use_ret_steps", False)
-        if self.use_ret_steps:
-            self.ret_steps = 2  # Calculate first 2 steps
-            self.cutoff_steps = config["infer_steps"]  # All last steps
+        # For 4-step distillation: ALWAYS calculate steps 0, 1, and 3
+        # Only potentially cache step 2 (the middle step)
+        infer_steps = config.get("infer_steps", 4)
+        
+        if infer_steps <= 4:
+            # 4-step mode: always calculate first 2 and last step
+            # Only step 2 *might* be cached if threshold allows
+            self.ret_steps = 2  # Always calculate steps 0 and 1
+            self.cutoff_steps = infer_steps - 1  # Always calculate step 3
+            print(f"   TeaCache 4-step mode: Only step 2 may be cached")
         else:
-            self.ret_steps = 1  # Calculate first step only
-            self.cutoff_steps = config["infer_steps"] - 1  # Calculate last step
+            # More steps = can be more aggressive with caching
+            self.ret_steps = 2
+            self.cutoff_steps = infer_steps - 1
         
         # Statistics for debugging
         self.cache_hits = 0
