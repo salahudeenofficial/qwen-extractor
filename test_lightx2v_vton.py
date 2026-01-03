@@ -288,14 +288,6 @@ def run_lightx2v_vton(
         print(f"\n🔧 Flash Attention unavailable ({type(e).__name__}), using PyTorch SDPA")
         attn_mode = "torch_sdpa"
     
-    # Enable TeaCache if requested (before creating generator)
-    # NOTE: TeaCache is NOT compatible with Qwen Image model - the compiled
-    # inference class does not exist. Feature caching requires video models.
-    if enable_teacache:
-        print(f"\n⚠️ TeaCache requested but NOT supported for Qwen Image model")
-        print("   TeaCache requires video models (Wan2.x, HunyuanVideo)")
-        print("   Continuing without TeaCache...")
-    
     # Create generator with resolution settings
     print(f"\n🔧 Creating generator (steps={steps}, resolution={target_width}x{target_height})...")
     
@@ -313,8 +305,44 @@ def run_lightx2v_vton(
         height=target_height,
     )
     
-    # Note: torch.compile via enable_compile() is not compatible with Qwen Image model
-    # The compiled inference class doesn't exist for this model type
+    # Enable TeaCache AFTER creating generator (model must be loaded first)
+    # We monkey-patch the transformer_infer with our TeaCache implementation
+    teacache_enabled = False
+    if enable_teacache:
+        print(f"\n⚡ Enabling TeaCache (threshold={teacache_thresh})...")
+        try:
+            # Import our TeaCache implementation
+            import sys
+            import os
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from teacache_transformer_infer import QwenImageTeaCacheTransformerInfer
+            
+            # Get the current transformer_infer
+            orig_transformer_infer = pipe.runner.model.transformer_infer
+            
+            # Create new TeaCache infer instance with same config
+            config = orig_transformer_infer.config.copy()
+            config["teacache_thresh"] = teacache_thresh
+            config["coefficients"] = [1.0]  # Linear scaling
+            config["infer_steps"] = steps
+            
+            # Create TeaCache wrapper
+            teacache_infer = QwenImageTeaCacheTransformerInfer(config)
+            teacache_infer.scheduler = orig_transformer_infer.scheduler
+            teacache_infer.infer_func = orig_transformer_infer.infer_func
+            
+            # Replace the transformer_infer
+            pipe.runner.model.transformer_infer = teacache_infer
+            
+            teacache_enabled = True
+            print("✅ TeaCache enabled")
+            print(f"   Threshold: {teacache_thresh}")
+            print(f"   Expected: Skip 1-2 transformer passes → 25-50% speedup")
+        except Exception as e:
+            print(f"⚠️ TeaCache setup failed: {e}")
+            import traceback
+            traceback.print_exc()
+            print("   Continuing without TeaCache...")
     
     init_time = time.time() - start_time
     print(f"✅ Pipeline initialized in {init_time:.2f} seconds")
