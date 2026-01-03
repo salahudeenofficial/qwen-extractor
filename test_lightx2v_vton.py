@@ -304,13 +304,19 @@ def run_lightx2v_vton(
     
     # Create generator with resolution settings
     print(f"\n🔧 Creating generator (steps={steps}, resolution={target_width}x{target_height})...")
+    
+    # Set custom_shape to force specific resolution (format: "height,width")
+    # This overrides LightX2V's automatic aspect ratio resolution
+    custom_shape = f"{target_height},{target_width}"
+    
     pipe.create_generator(
         attn_mode=attn_mode,
-        auto_resize=False,  # Disable auto-resize, use our calculated resolution
+        auto_resize=False,  # Disable auto-resize
         infer_steps=steps,
         guidance_scale=1.0,
         width=target_width,
         height=target_height,
+        custom_shape=custom_shape,  # Force specific resolution
     )
     
     init_time = time.time() - start_time
