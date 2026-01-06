@@ -28,10 +28,16 @@ echo "📦 Upgrading pip..."
 pip install --upgrade pip
 
 # Install PyTorch 2.6.0 with CUDA 12.4 support
-# Note: PyTorch 2.9 has JIT issues, 2.5.1 is too old for latest transformers
+# Note: PyTorch 2.9 has compatibility issues with LightX2V
 echo ""
 echo "🔧 Installing PyTorch 2.6.0 with CUDA 12.4 support..."
-pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
+pip install torch==2.6.0+cu124 torchvision==0.21.0+cu124 torchaudio==2.6.0+cu124 --index-url https://download.pytorch.org/whl/cu124
+
+# Install Flash Attention 2 for L40/L40S (critical for performance!)
+# NOTE: Must install BEFORE xformers to avoid conflicts
+echo ""
+echo "⚡ Installing Flash Attention 2..."
+pip install flash-attn==2.7.3 --no-build-isolation --no-cache-dir
 
 # Install compatible xformers for torch 2.6.0
 echo ""
@@ -64,6 +70,18 @@ if torch.cuda.is_available():
     print(f'CUDA version: {torch.version.cuda}')
     print(f'GPU: {torch.cuda.get_device_name(0)}')
     print(f'GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB')
+    
+    # Check TF32 support (Ada Lovelace/Hopper)
+    props = torch.cuda.get_device_properties(0)
+    if props.major >= 8:
+        print(f'TF32 supported: Yes (SM {props.major}.{props.minor})')
+
+# Check Flash Attention 2
+try:
+    from flash_attn import flash_attn_func
+    print('✅ Flash Attention 2 is available')
+except ImportError as e:
+    print(f'⚠️ Flash Attention 2 not available: {e}')
 
 import diffusers
 print(f'Diffusers version: {diffusers.__version__}')
@@ -73,15 +91,15 @@ print(f'Transformers version: {transformers.__version__}')
 
 # Check if QwenImageEditPlusPipeline is available
 from diffusers import QwenImageEditPlusPipeline
-print('✅ QwenImageEditPlusPipeline is available!')
+print('✅ QwenImageEditPlusPipeline is available')
 
 # Check if LoRA loading works
 from diffusers.models import QwenImageTransformer2DModel
-print('✅ QwenImageTransformer2DModel is available!')
+print('✅ QwenImageTransformer2DModel is available')
 
 # Check for key components
 from diffusers import FlowMatchEulerDiscreteScheduler
-print('✅ FlowMatchEulerDiscreteScheduler is available!')
+print('✅ FlowMatchEulerDiscreteScheduler is available')
 EOF
 
 echo ""
