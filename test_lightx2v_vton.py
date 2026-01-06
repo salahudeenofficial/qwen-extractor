@@ -11,13 +11,19 @@ Features:
 - CPU offloading for low-VRAM GPUs
 - CFG parallelism for faster inference
 
-Performance (on H100):
-- BF16 + 4-step LoRA: ~4-6 seconds
-- FP8 + 4-step distillation: ~3-4 seconds
-- Combined optimizations: up to 42x speedup vs base model
+Performance (on L40/L40S with optimizations):
+- BF16 + 4-step LoRA: ~6-10 seconds
+- FP8 + 4-step distillation: ~5-7 seconds
+- FP8 + TeaCache: ~4-6 seconds
+
+L40/L40S Notes:
+- Uses Flash Attention 2 (FA3 is Hopper-only)
+- Native FP8 support (SM 8.9)
+- 48GB VRAM - no offloading needed
 """
 
 import argparse
+import gc
 import os
 import sys
 import time
@@ -26,8 +32,15 @@ from pathlib import Path
 import torch
 from PIL import Image
 
-# Set CUDA arch to avoid compilation warnings
+# Set CUDA arch for L40/L40S (Ada Lovelace SM 8.9)
 os.environ.setdefault('TORCH_CUDA_ARCH_LIST', '8.9')
+
+# Enable TF32 for faster matmul on Ada Lovelace GPUs
+if torch.cuda.is_available():
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
+    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.deterministic = False
 
 
 # Virtual Try-On Prompts
@@ -272,18 +285,35 @@ def run_lightx2v_vton(
         steps = 40
         print("\n⚠️ Using base model (40 steps, slower)")
     
-    # Determine attention mode (don't import flash_attn directly - it may be broken)
+    # Determine attention mode
+    # L40/L40S: Use flash_attn2 (FA3 is Hopper-only)
     # LightX2V supported modes: "flash_attn2", "flash_attn3", "torch_sdpa", "sage_attn2"
     attn_mode = "torch_sdpa"  # Safe default - uses PyTorch SDPA
     
-    # Check if flash_attn is available and working
+    # Detect GPU and choose optimal attention backend
+    gpu_name = torch.cuda.get_device_name(0).lower() if torch.cuda.is_available() else ""
+    
+    # Check if flash_attn is available
     try:
         import importlib.util
         if importlib.util.find_spec("flash_attn") is not None:
-            # Check if it actually loads without error
             import flash_attn
-            attn_mode = "flash_attn2"
-            print(f"\n🔧 Using Flash Attention 2")
+            # L40/L40S or other Ada GPUs: Use FA2 (FA3 is Hopper-only)
+            if "l40" in gpu_name or "4090" in gpu_name or "4080" in gpu_name:
+                attn_mode = "flash_attn2"
+                print(f"\n🔧 L40/Ada GPU detected → Using Flash Attention 2")
+            elif "h100" in gpu_name or "h200" in gpu_name:
+                # Only Hopper GPUs can use FA3
+                try:
+                    from flash_attn_interface import flash_attn_func
+                    attn_mode = "flash_attn3"
+                    print(f"\n🔧 Hopper GPU detected → Using Flash Attention 3")
+                except ImportError:
+                    attn_mode = "flash_attn2"
+                    print(f"\n🔧 Hopper GPU but FA3 not installed → Using Flash Attention 2")
+            else:
+                attn_mode = "flash_attn2"
+                print(f"\n🔧 Using Flash Attention 2")
     except Exception as e:
         print(f"\n🔧 Flash Attention unavailable ({type(e).__name__}), using PyTorch SDPA")
         attn_mode = "torch_sdpa"

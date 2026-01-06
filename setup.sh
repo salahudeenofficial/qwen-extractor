@@ -1,7 +1,12 @@
 #!/bin/bash
 # ================================================================
 # Qwen-Image-Edit-2511 + Lightning LoRA Setup Script
-# Base Image: vastai/base-image:cuda-12.4.1-cudnn-devel-ubuntu22.04-py310-ipv2
+# Target GPU: L40/L40S (Ada Lovelace SM 8.9)
+# 
+# Optimized for:
+# - Flash Attention 2 (FA3 is Hopper-only)
+# - Native FP8 support
+# - 48GB VRAM (no offloading needed)
 # ================================================================
 
 set -e  # Exit on error
