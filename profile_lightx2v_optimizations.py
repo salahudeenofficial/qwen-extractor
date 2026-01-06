@@ -127,16 +127,33 @@ def get_environment_info() -> Dict[str, Any]:
 
 def get_pytorch_settings() -> Dict[str, Any]:
     """Check PyTorch optimization settings."""
-    settings = {
-        "tf32_matmul": torch.backends.cuda.matmul.allow_tf32 if hasattr(torch.backends.cuda.matmul, 'allow_tf32') else False,
-        "tf32_cudnn": torch.backends.cudnn.allow_tf32 if hasattr(torch.backends.cudnn, 'allow_tf32') else False,
-        "cudnn_benchmark": torch.backends.cudnn.benchmark,
-        "cudnn_deterministic": torch.backends.cudnn.deterministic,
-        "cudnn_enabled": torch.backends.cudnn.enabled,
-    }
+    import torch as th  # Local import to avoid any shadowing issues
+    
+    settings = {}
+    
+    # TF32 settings
+    try:
+        settings["tf32_matmul"] = th.backends.cuda.matmul.allow_tf32
+    except:
+        settings["tf32_matmul"] = False
+    
+    try:
+        settings["tf32_cudnn"] = th.backends.cudnn.allow_tf32
+    except:
+        settings["tf32_cudnn"] = False
+    
+    # cuDNN settings
+    try:
+        settings["cudnn_benchmark"] = th.backends.cudnn.benchmark
+        settings["cudnn_deterministic"] = th.backends.cudnn.deterministic
+        settings["cudnn_enabled"] = th.backends.cudnn.enabled
+    except:
+        settings["cudnn_benchmark"] = False
+        settings["cudnn_deterministic"] = False
+        settings["cudnn_enabled"] = False
     
     # Check if torch.compile could be used
-    settings["torch_compile_available"] = hasattr(torch, 'compile')
+    settings["torch_compile_available"] = hasattr(th, 'compile')
     
     # Check for dynamo settings
     try:
