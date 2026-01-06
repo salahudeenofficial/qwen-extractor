@@ -1,0 +1,33 @@
+{
+  "python_version": "3.11.13",
+  "torch_version": "2.6.0+cu124",
+  "cuda_version": "12.4",
+  "cudnn_version": "90100",
+  "gpu_name": "NVIDIA L40",
+  "gpu_memory_gb": 44.39,
+  "torch_compile_enabled": false,
+  "torch_compile_mode": "",
+  "tf32_enabled": false,
+  "cudnn_benchmark": false,
+  "cudnn_deterministic": false,
+  "attn_backend": "",
+  "rope_type": "",
+  "modulate_type": "",
+  "quantization": "",
+  "feature_caching": "",
+  "offload_enabled": false,
+  "triton_fused_scale_shift": true,
+  "triton_fused_modulate": true,
+  "triton_rmsnorm": false,
+  "triton_autotune_active": false,
+  "warmup_time_s": 0.0,
+  "inference_time_s": 0.0,
+  "time_per_step_s": 0.0,
+  "peak_memory_gb": 0.0,
+  "timing_breakdown": {},
+  "warnings": [
+    "TF32 is disabled - enable for ~2x speedup on Ampere+ GPUs",
+    "cuDNN benchmark is disabled - enable for optimized kernel selection",
+    "Pipeline error: LightX2VPipeline.create_generator() got an unexpected keyword argument 'auto_resize'"
+  ]
+}

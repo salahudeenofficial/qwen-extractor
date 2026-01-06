@@ -524,7 +524,6 @@ def generate_report(args) -> OptimizationReport:
         # Create generator
         pipe.create_generator(
             attn_mode=attn_mode,
-            auto_resize=False,
             infer_steps=4,
             guidance_scale=1.0,
             width=720,
