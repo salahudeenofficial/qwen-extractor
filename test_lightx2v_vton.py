@@ -365,8 +365,20 @@ def run_lightx2v_vton(
         guidance_scale=1.0,
         width=actual_width,
         height=actual_height,
-        aspect_ratio=target_aspect_ratio,  # This sets config aspect_ratio properly
+        aspect_ratio=target_aspect_ratio,
     )
+    
+    # Monkey-patch run_pipeline to inject aspect_ratio into input_info
+    # This is needed because:
+    # 1. set_config() filters out aspect_ratio (it's in ALL_INPUT_INFO_KEYS)
+    # 2. set_input_info() for i2i task doesn't populate aspect_ratio
+    # 3. get_custom_shape() checks input_info.aspect_ratio first
+    original_run_pipeline = pipe.runner.run_pipeline
+    def patched_run_pipeline(input_info):
+        input_info.aspect_ratio = target_aspect_ratio
+        print(f"   Injected aspect_ratio into input_info: {target_aspect_ratio}")
+        return original_run_pipeline(input_info)
+    pipe.runner.run_pipeline = patched_run_pipeline
     
     # Enable TeaCache AFTER creating generator (model must be loaded first)
     # We monkey-patch the transformer_infer with our TeaCache implementation
