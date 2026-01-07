@@ -344,10 +344,19 @@ def run_lightx2v_vton(
     
     print(f"📐 Input: {orig_w}x{orig_h} → Output: {actual_width}x{actual_height} (preserving aspect ratio)")
     
-    # Set custom_shape based on actual aspect-ratio-correct dimensions
-    # IMPORTANT: Must be a list [height, width], NOT a string!
-    pipe.custom_shape = [actual_height, actual_width]
-    print(f"   Setting custom_shape: {pipe.custom_shape}")
+    # Set aspect_ratio for LightX2V resolution control
+    # LightX2V default mappings:
+    #   "16:9": [1664, 928], "9:16": [928, 1664], "1:1": [1328, 1328]
+    #   "4:3": [1472, 1140], "3:4": [768, 1024]
+    if orig_ratio < 0.8:  # Portrait (taller than wide)
+        pipe.aspect_ratio = "3:4"  # Maps to 768x1024
+        print(f"   Setting aspect_ratio: 3:4 (portrait) → 768x1024")
+    elif orig_ratio > 1.2:  # Landscape (wider than tall)  
+        pipe.aspect_ratio = "4:3"  # Maps to 1472x1140
+        print(f"   Setting aspect_ratio: 4:3 (landscape) → 1472x1140")
+    else:  # Square-ish
+        pipe.aspect_ratio = "1:1"  # Maps to 1328x1328
+        print(f"   Setting aspect_ratio: 1:1 (square) → 1328x1328")
     
     pipe.create_generator(
         attn_mode=attn_mode,
