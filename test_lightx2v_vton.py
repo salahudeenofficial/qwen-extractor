@@ -345,7 +345,8 @@ def run_lightx2v_vton(
     print(f"📐 Input: {orig_w}x{orig_h} → Output: {actual_width}x{actual_height} (preserving aspect ratio)")
     
     # Set custom_shape based on actual aspect-ratio-correct dimensions
-    pipe.custom_shape = f"{actual_height},{actual_width}"
+    # IMPORTANT: Must be a list [height, width], NOT a string!
+    pipe.custom_shape = [actual_height, actual_width]
     print(f"   Setting custom_shape: {pipe.custom_shape}")
     
     pipe.create_generator(
