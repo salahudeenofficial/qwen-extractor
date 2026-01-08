@@ -1,0 +1,11 @@
+# Issues & Fixes
+
+## 1. Aspect Ratio Issue
+Problem: Output was 1664x928 regardless of input aspect ratio
+Cause: LightX2V's set_input_info() doesn't pass aspect_ratio for i2i tasks
+Fix: Monkey-patch run_pipeline to inject aspect_ratio into input_info + set _auto_resize=False
+
+## 2. Docker Container Compatibility
+Problem: Pre-installed flash_attn/sageattention compiled for wrong PyTorch version
+Cause: Base images have pre-compiled attention libs that conflict with PyTorch 2.6.0
+Fix: Use lightx2v/lightx2v:25101501-cu124 (CUDA 12.4) instead of cu128 version

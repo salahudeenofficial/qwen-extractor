@@ -1,0 +1,18 @@
+# FP8 Baseline Quickstart
+
+## Docker Image
+lightx2v/lightx2v:25101501-cu124
+
+## Commands
+git clone https://github.com/salahudeenofficial/try_og_pipeline.git
+cd try_og_pipeline
+git checkout fp8-baseline
+chmod +x setup_lightx2v.sh && ./setup_lightx2v.sh
+
+## Run Inference
+python test_lightx2v_vton.py --mode fp8 --person person.jpg --cloth cloth.png
+
+## Options
+--resolution 480p|720p|1080p (default: 720p)
+--teacache              (faster, slight quality loss)
+--teacache-thresh 0.05  (lower = better quality)
