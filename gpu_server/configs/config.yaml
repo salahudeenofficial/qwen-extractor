@@ -5,7 +5,7 @@
 server:
   node_id: "gpu-node-1"           # Unique identifier for this node
   host: "0.0.0.0"                 # Host to bind to
-  port: 8080                      # Port to listen on
+  port: 8000                      # Port to listen on
   workers: 1                      # Uvicorn workers (keep at 1 for single GPU)
 
 security:
