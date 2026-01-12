@@ -69,26 +69,52 @@ class PipelineManager:
     def find_model_paths(self) -> Optional[str]:
         """Find model paths in common locations."""
         possible_paths = [
+            # Local models directory (relative to gpu_server)
             "models/Qwen-Image-Edit-2511",
-            "./Qwen-Image-Edit-2511",
-            "/models/Qwen-Image-Edit-2511",
-            os.path.expanduser("~/.cache/huggingface/hub/models--Qwen--Qwen-Image-Edit-2511"),
+            "../models/Qwen-Image-Edit-2511",
+            # Project root
             str(SCRIPT_DIR / "models" / "Qwen-Image-Edit-2511"),
+            # Workspace paths (Vast.ai)
+            "/workspace/try_og_pipeline/models/Qwen-Image-Edit-2511",
+            "/workspace/models/Qwen-Image-Edit-2511",
+            # Absolute paths
+            "/models/Qwen-Image-Edit-2511",
+            "./Qwen-Image-Edit-2511",
+            # HuggingFace cache - check for snapshots directory
+            os.path.expanduser("~/.cache/huggingface/hub/models--Qwen--Qwen-Image-Edit-2511"),
+            "/root/.cache/huggingface/hub/models--Qwen--Qwen-Image-Edit-2511",
         ]
         
         for path in possible_paths:
             if os.path.exists(path):
-                return path
+                # For HuggingFace cache, need to find the actual snapshot
+                if "models--Qwen--Qwen-Image-Edit-2511" in path:
+                    snapshots_dir = os.path.join(path, "snapshots")
+                    if os.path.exists(snapshots_dir):
+                        # Get the latest snapshot
+                        snapshots = os.listdir(snapshots_dir)
+                        if snapshots:
+                            snapshot_path = os.path.join(snapshots_dir, snapshots[0])
+                            print(f"📂 Found HF cache snapshot: {snapshot_path}")
+                            return snapshot_path
+                else:
+                    return path
         
         return None
     
     def find_lora_path(self) -> Optional[str]:
         """Find LoRA weights path."""
         possible_paths = [
+            # Relative paths
             "models/Qwen-Image-Edit-2511-Lightning/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-fp32.safetensors",
             "models/Qwen-Image-Edit-2511-Lightning/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+            "../models/Qwen-Image-Edit-2511-Lightning/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
             "lora_weights/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+            # Project root
             str(SCRIPT_DIR / "models" / "Qwen-Image-Edit-2511-Lightning" / "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors"),
+            # Workspace paths (Vast.ai)
+            "/workspace/try_og_pipeline/models/Qwen-Image-Edit-2511-Lightning/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+            "/workspace/models/Qwen-Image-Edit-2511-Lightning/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
         ]
         
         for path in possible_paths:
@@ -100,9 +126,15 @@ class PipelineManager:
     def find_fp8_path(self) -> Optional[str]:
         """Find FP8 quantized weights path."""
         possible_paths = [
+            # Relative paths
             "models/Qwen-Image-Edit-2511-Lightning/qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning.safetensors",
             "models/qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning.safetensors",
+            "../models/Qwen-Image-Edit-2511-Lightning/qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning.safetensors",
+            # Project root
             str(SCRIPT_DIR / "models" / "Qwen-Image-Edit-2511-Lightning" / "qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning.safetensors"),
+            # Workspace paths (Vast.ai)
+            "/workspace/try_og_pipeline/models/Qwen-Image-Edit-2511-Lightning/qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning.safetensors",
+            "/workspace/models/Qwen-Image-Edit-2511-Lightning/qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning.safetensors",
         ]
         
         for path in possible_paths:
