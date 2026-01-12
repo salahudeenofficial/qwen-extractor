@@ -75,6 +75,7 @@ async function checkServerStatus() {
         // Check /test endpoint for readiness
         const response = await fetch(`${state.serverUrl}/test`, {
             method: 'GET',
+            mode: 'cors',
             signal: AbortSignal.timeout(5000),
         });
 

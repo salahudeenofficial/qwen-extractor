@@ -10,7 +10,7 @@ server:
 
 security:
   internal_auth_token: "dev-secret-token-change-in-production"  # Token for incoming requests
-  require_auth: true              # Set to false for development/testing
+  require_auth: false             # Disabled for frontend testing
 
 asset_service:
   callback_url: "http://asset-service:9009/v1/vton/result"
