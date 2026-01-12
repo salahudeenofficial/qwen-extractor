@@ -27,7 +27,7 @@ fi
 
 # Get host and port from config or use defaults
 HOST="${GPU_SERVER_HOST:-0.0.0.0}"
-PORT="${GPU_SERVER_PORT:-8080}"
+PORT="${GPU_SERVER_PORT:-8000}"
 
 echo ""
 echo "📋 Configuration:"

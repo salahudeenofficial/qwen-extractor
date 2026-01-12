@@ -21,7 +21,7 @@ export PYTHONPATH="${SCRIPT_DIR}:${SCRIPT_DIR}/..:${PYTHONPATH}"
 
 # Get host and port
 HOST="${GPU_SERVER_HOST:-0.0.0.0}"
-PORT="${GPU_SERVER_PORT:-8080}"
+PORT="${GPU_SERVER_PORT:-8000}"
 
 echo "📋 Configuration:"
 echo "   Mock Mode: ENABLED"
