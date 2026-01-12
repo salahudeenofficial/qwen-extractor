@@ -126,6 +126,9 @@ def find_lora_path():
 def find_fp8_path():
     """Find FP8 quantized weights path."""
     possible_paths = [
+        # Correct filename with version suffix
+        "models/Qwen-Image-Edit-2511-Lightning/qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning_4steps_v1.0.safetensors",
+        # Old filename (fallback)
         "models/Qwen-Image-Edit-2511-Lightning/qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning.safetensors",
         "models/qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning.safetensors",
     ]
