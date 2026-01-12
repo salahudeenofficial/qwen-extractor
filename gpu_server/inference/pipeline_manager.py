@@ -334,18 +334,47 @@ class PipelineManager:
         if prompt is None:
             prompt = VTON_PROMPT_CN
         
+        # Detect aspect ratio from input image
+        person_img = Image.open(person_image_path)
+        orig_w, orig_h = person_img.size
+        orig_ratio = orig_w / orig_h
+        person_img.close()
+        
+        # Determine aspect_ratio for LightX2V
+        if orig_ratio < 0.8:  # Portrait
+            target_aspect_ratio = "3:4"
+        elif orig_ratio > 1.2:  # Landscape
+            target_aspect_ratio = "4:3"
+        else:  # Square
+            target_aspect_ratio = "1:1"
+        
         # Prepare image paths (comma-separated for LightX2V)
         image_paths = f"{person_image_path},{garment_image_path}"
         
-        # Generate directly without monkey-patching
-        # The pipeline was already configured in create_generator with aspect_ratio
-        self.pipe.generate(
-            seed=seed,
-            image_path=image_paths,
-            prompt=prompt,
-            negative_prompt="",
-            save_result_path=output_path,
-        )
+        # Monkey-patch run_pipeline to inject aspect_ratio into input_info
+        # This is needed because LightX2V's get_custom_shape() checks input_info.aspect_ratio
+        original_run_pipeline = self.pipe.runner.run_pipeline
+        
+        def patched_run_pipeline(input_info):
+            input_info.aspect_ratio = target_aspect_ratio
+            # Also need to set _auto_resize in config (get_custom_shape checks it)
+            self.pipe.runner.config["_auto_resize"] = False
+            return original_run_pipeline(input_info)
+        
+        self.pipe.runner.run_pipeline = patched_run_pipeline
+        
+        try:
+            # Generate
+            self.pipe.generate(
+                seed=seed,
+                image_path=image_paths,
+                prompt=prompt,
+                negative_prompt="",
+                save_result_path=output_path,
+            )
+        finally:
+            # Restore original method
+            self.pipe.runner.run_pipeline = original_run_pipeline
     
     def get_status(self) -> Dict[str, Any]:
         """Get pipeline status."""
