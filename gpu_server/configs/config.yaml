@@ -14,7 +14,7 @@ security:
 
 asset_service:
   callback_url: "http://65.0.6.48:9009/v1/vton/result"
-  internal_auth_token: "asset-service-secret"
+  internal_auth_token: "GPU_TO_ASSET_SECRET"
   timeout: 10                     # Callback timeout in seconds
   retries: 3                      # Number of callback retries
   retry_backoff: [1, 2, 4]        # Exponential backoff in seconds
