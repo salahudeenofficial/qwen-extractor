@@ -68,9 +68,71 @@ echo "   ✓ Updated result callback: ${RESULT_CALLBACK_URL}"
 echo "   ✓ Updated load balancer URL: ${JOB_COMPLETE_CALLBACK_URL} (will POST to ${JOB_COMPLETE_CALLBACK_URL}/job_complete)"
 echo ""
 
-# Step 3: Install parent requirements
-echo "📦 Step 2: Installing parent requirements (PyTorch, transformers, etc.)..."
+# Step 3: Setup LightX2V (pinned to compatible version)
+echo "📦 Step 2: Setting up LightX2V..."
 PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+if [ ! -d "${PARENT_DIR}/LightX2V" ]; then
+    echo "   Cloning LightX2V..."
+    cd "$PARENT_DIR"
+    git clone https://github.com/ModelTC/LightX2V.git
+else
+    echo "   ✓ LightX2V directory already exists"
+fi
+
+cd "${PARENT_DIR}/LightX2V"
+# IMPORTANT: Pin to commit before breaking changes
+echo "   Checking out compatible version (7651b0f)..."
+git fetch origin 2>/dev/null || true
+git checkout 7651b0f 2>/dev/null || git checkout -f 7651b0f
+pip install -q -e . 2>/dev/null || pip install -e .
+cd "$SCRIPT_DIR"
+echo "   ✅ LightX2V ready"
+echo ""
+
+# Step 3.5: Download models
+echo "📥 Step 2.5: Downloading models..."
+cd "$PARENT_DIR"
+
+# Ensure huggingface-cli is available
+if ! command -v huggingface-cli &> /dev/null; then
+    echo "   Installing huggingface_hub for model downloads..."
+    pip install -q "huggingface_hub[cli]" || pip install "huggingface_hub[cli]"
+fi
+
+mkdir -p models
+
+# Download base model if not present
+if [ ! -d "models/Qwen-Image-Edit-2511" ] || [ -z "$(ls -A models/Qwen-Image-Edit-2511 2>/dev/null)" ]; then
+    echo "   Downloading Qwen-Image-Edit-2511 base model..."
+    huggingface-cli download Qwen/Qwen-Image-Edit-2511 --local-dir models/Qwen-Image-Edit-2511
+else
+    echo "   ✅ Base model already downloaded"
+fi
+
+# Download Lightning/FP8 weights if not present
+if [ ! -d "models/Qwen-Image-Edit-2511-Lightning" ] || [ -z "$(ls -A models/Qwen-Image-Edit-2511-Lightning 2>/dev/null)" ]; then
+    echo "   Downloading Lightning LoRA and FP8 weights..."
+    huggingface-cli download lightx2v/Qwen-Image-Edit-2511-Lightning --local-dir models/Qwen-Image-Edit-2511-Lightning
+else
+    echo "   ✅ Lightning weights already downloaded"
+fi
+
+# Verify FP8 weights exist
+FP8_FILE="models/Qwen-Image-Edit-2511-Lightning/qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning_4steps_v1.0.safetensors"
+if [ -f "$FP8_FILE" ]; then
+    echo "   ✅ FP8 weights found"
+else
+    echo "   ⚠️  FP8 weights not found at expected path!"
+    echo "      Looking for: $FP8_FILE"
+    echo "      Available files:"
+    ls -la models/Qwen-Image-Edit-2511-Lightning/ 2>/dev/null || echo "   (folder not found)"
+fi
+
+cd "$SCRIPT_DIR"
+echo ""
+
+# Step 4: Install parent requirements
+echo "📦 Step 3: Installing parent requirements (PyTorch, transformers, etc.)..."
 if [ -f "${PARENT_DIR}/requirements.txt" ]; then
     echo "   Installing from: ${PARENT_DIR}/requirements.txt"
     pip install -q -r "${PARENT_DIR}/requirements.txt"
@@ -80,8 +142,8 @@ else
 fi
 echo ""
 
-# Step 4: Install GPU server requirements
-echo "📦 Step 3: Installing GPU server requirements..."
+# Step 5: Install GPU server requirements
+echo "📦 Step 4: Installing GPU server requirements..."
 if [ -f "requirements.txt" ]; then
     pip install -q -r requirements.txt
     echo "   ✓ GPU server requirements installed"
@@ -91,12 +153,12 @@ else
 fi
 echo ""
 
-# Step 5: Set environment variables
+# Step 6: Set environment variables
 export CONFIG_PATH="${CONFIG_PATH:-configs/config.yaml}"
 export PYTHONPATH="${SCRIPT_DIR}:${SCRIPT_DIR}/..:${PYTHONPATH}"
 
-# Step 6: Verify configuration
-echo "📋 Step 4: Verifying configuration..."
+# Step 7: Verify configuration
+echo "📋 Step 5: Verifying configuration..."
 echo ""
 echo "   Configuration Summary:"
 echo "   ────────────────────────────────────────────"
@@ -108,7 +170,7 @@ echo "   Config File:              ${CONFIG_PATH}"
 echo "   ────────────────────────────────────────────"
 echo ""
 
-# Step 7: Start the server
+# Step 8: Start the server
 echo "============================================================"
 echo "🚀 Starting GPU Server..."
 echo "============================================================"
