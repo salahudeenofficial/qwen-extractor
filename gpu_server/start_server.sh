@@ -8,11 +8,14 @@ set -e
 # CONFIGURATION VARIABLES - Edit these values as needed
 # ============================================================================
 
-# Result callback URL - where to send inference results
-RESULT_CALLBACK_URL="http://65.0.6.48:9009/v1/vton/result"
+# Result callback URL - where to send inference results (full endpoint URL)
+# This is the complete URL where inference results (images + metadata) will be sent
+RESULT_CALLBACK_URL="http://13.201.18.255:9009/v1/vton/result"
 
-# Job complete callback URL - load balancer notification URL
-JOB_COMPLETE_CALLBACK_URL="http://65.0.6.48:9005"
+# Load balancer base URL - for job completion notifications (base URL only, NOT including /job_complete)
+# The server automatically appends /job_complete to this URL
+# Example: If you set "http://13.201.18.255:9005", the server will POST to "http://13.201.18.255:9005/job_complete"
+JOB_COMPLETE_CALLBACK_URL="http://13.201.18.255:9005"
 
 # Server port
 SERVER_PORT=8000
@@ -62,7 +65,7 @@ sed -i "/^load_balancer:/,/^[^ ]/s|^  url:.*|  url: \"${JOB_COMPLETE_CALLBACK_UR
 
 echo "   ✓ Updated port: ${SERVER_PORT}"
 echo "   ✓ Updated result callback: ${RESULT_CALLBACK_URL}"
-echo "   ✓ Updated job complete callback: ${JOB_COMPLETE_CALLBACK_URL}"
+echo "   ✓ Updated load balancer URL: ${JOB_COMPLETE_CALLBACK_URL} (will POST to ${JOB_COMPLETE_CALLBACK_URL}/job_complete)"
 echo ""
 
 # Step 3: Install parent requirements
@@ -97,10 +100,11 @@ echo "📋 Step 4: Verifying configuration..."
 echo ""
 echo "   Configuration Summary:"
 echo "   ────────────────────────────────────────────"
-echo "   Server Port:        ${SERVER_PORT}"
-echo "   Result Callback:    ${RESULT_CALLBACK_URL}"
-echo "   Job Complete URL:   ${JOB_COMPLETE_CALLBACK_URL}"
-echo "   Config File:        ${CONFIG_PATH}"
+echo "   Server Port:              ${SERVER_PORT}"
+echo "   Result Callback:          ${RESULT_CALLBACK_URL}"
+echo "   Load Balancer Base URL:   ${JOB_COMPLETE_CALLBACK_URL}"
+echo "   (LB POST endpoint):       ${JOB_COMPLETE_CALLBACK_URL}/job_complete"
+echo "   Config File:              ${CONFIG_PATH}"
 echo "   ────────────────────────────────────────────"
 echo ""
 
