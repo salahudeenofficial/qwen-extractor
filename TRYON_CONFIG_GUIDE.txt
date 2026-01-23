@@ -1,0 +1,130 @@
+================================================================================
+/tryon Endpoint - Config Field Guide
+================================================================================
+
+FIELD NAME: config
+TYPE: string (JSON format)
+REQUIRED: Yes
+CONTENT-TYPE: multipart/form-data
+
+================================================================================
+CONFIG JSON STRUCTURE
+================================================================================
+
+{
+  "seed": 42,           // int, optional
+  "steps": 4,           // int, optional  
+  "cfg": 1.0,           // float, optional
+  "prompt": "..."       // string, optional
+}
+
+IMPORTANT: Send as JSON STRING, not JSON object!
+
+================================================================================
+FIELD DESCRIPTIONS
+================================================================================
+
+seed (int, optional)
+  - Random seed for reproducible results
+  - Default: 42
+  - Same seed + same inputs = same output
+  - Range: any integer
+
+steps (int, optional)
+  - Number of inference steps (denoising iterations)
+  - Default: 4
+  - Recommended: 4 (fast, ~12-13s)
+  - Alternative: 40 (slower, ~60+s, higher quality)
+
+cfg (float, optional)
+  - Classifier-Free Guidance scale
+  - Default: 1.0
+  - Recommended: 1.0
+  - Range: 0.1 to 20.0
+
+prompt (string, optional)
+  - Custom prompt text for inference
+  - Default: null (uses built-in VTON prompt)
+  - If provided, overrides default prompt
+  - Use for custom styling requirements
+
+================================================================================
+EXAMPLES
+================================================================================
+
+Minimal (all defaults):
+  config: "{}"
+
+Standard (recommended):
+  config: "{\"seed\": 42, \"steps\": 4, \"cfg\": 1.0}"
+
+With custom prompt:
+  config: "{\"seed\": 42, \"steps\": 4, \"cfg\": 1.0, \"prompt\": \"Custom text\"}"
+
+================================================================================
+PYTHON EXAMPLE
+================================================================================
+
+import json
+
+data = {
+    "job_id": "job-123",
+    "user_id": "user-abc",
+    "session_id": "session-xyz",
+    "provider": "qwen",
+    "config": json.dumps({
+        "seed": 42,
+        "steps": 4,
+        "cfg": 1.0,
+        "prompt": "Optional custom prompt"
+    })
+}
+
+files = {
+    "masked_user_image": open("person.png", "rb"),
+    "garment_image": open("garment.png", "rb")
+}
+
+response = requests.post(
+    "http://server:8000/tryon",
+    headers={"X-Internal-Auth": "your-token"},
+    data=data,
+    files=files
+)
+
+================================================================================
+cURL EXAMPLE
+================================================================================
+
+curl -X POST "http://server:8000/tryon" \
+  -H "X-Internal-Auth: your-token" \
+  -F "job_id=job-123" \
+  -F "user_id=user-abc" \
+  -F "session_id=session-xyz" \
+  -F "provider=qwen" \
+  -F "config={\"seed\": 42, \"steps\": 4, \"cfg\": 1.0}" \
+  -F "masked_user_image=@person.png" \
+  -F "garment_image=@garment.png"
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+Field          Type      Default    Recommended    Notes
+------------------------------------------------------------------------
+seed           int       42         42             Controls randomness
+steps          int       4          4              More = slower + better
+cfg            float     1.0        1.0            Guidance strength
+prompt         string    null        null           Custom prompt (optional)
+
+================================================================================
+NOTES
+================================================================================
+
+1. All fields are OPTIONAL - missing fields use defaults
+2. Config must be a JSON STRING (use json.dumps() in Python)
+3. Default prompt is optimized for VTON - only override if needed
+4. Response is 202 Accepted - results sent via callback URL
+5. Server processes one job at a time (429 if busy)
+
+================================================================================
