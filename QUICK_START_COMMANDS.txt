@@ -1,0 +1,81 @@
+================================================================================
+Quick Start Commands - GPU Server Setup
+================================================================================
+
+STEP 1: Clone the Repository
+================================================================================
+
+git clone https://github.com/salahudeenofficial/try_og_pipeline.git
+cd try_og_pipeline
+
+================================================================================
+STEP 2: Navigate to GPU Server Directory
+================================================================================
+
+cd gpu_server
+
+================================================================================
+STEP 3: Configure (Optional - Edit if needed)
+================================================================================
+
+Edit start_server.sh and update these variables at the top if needed:
+
+  RESULT_CALLBACK_URL="http://35.154.214.159:9009/v1/vton/result"
+  JOB_COMPLETE_CALLBACK_URL="http://35.154.214.159:9005"
+  GPU_NODE_ID="gpu-node-1"
+  SERVER_PORT=8000
+  INCOMING_AUTH_TOKEN="dev-secret-token-change-in-production"
+  RESULT_CALLBACK_AUTH_TOKEN="supersecret-internal-token"
+  LOAD_BALANCER_AUTH_TOKEN=""
+
+================================================================================
+STEP 4: Make Script Executable and Run
+================================================================================
+
+chmod +x start_server.sh
+./start_server.sh
+
+================================================================================
+What the Script Does:
+================================================================================
+
+1. Configures server (callbacks, port, auth tokens, node ID)
+2. Sets up LightX2V (clones, checks out compatible version, installs)
+3. Downloads models (base model + Lightning/FP8 weights)
+4. Installs all dependencies (parent + GPU server)
+5. Starts server on port 8000
+
+================================================================================
+One-Line Command (All Steps Combined)
+================================================================================
+
+git clone https://github.com/salahudeenofficial/try_og_pipeline.git && \
+cd try_og_pipeline/gpu_server && \
+chmod +x start_server.sh && \
+./start_server.sh
+
+================================================================================
+Verify Server is Running
+================================================================================
+
+# In another terminal:
+curl http://localhost:8000/health
+
+# Expected response: {"status": "ok", "model_loaded": true, ...}
+
+================================================================================
+Server Endpoints
+================================================================================
+
+Health Check:    http://localhost:8000/health
+API Docs:        http://localhost:8000/docs
+Try-On Endpoint: http://localhost:8000/tryon
+Direct Infer:    http://localhost:8000/infer
+
+================================================================================
+Stop Server
+================================================================================
+
+Press Ctrl+C in the terminal running the server
+
+================================================================================

@@ -10,12 +10,12 @@ set -e
 
 # Result callback URL - where to send inference results (full endpoint URL)
 # This is the complete URL where inference results (images + metadata) will be sent
-RESULT_CALLBACK_URL="http://3.109.202.177:9009/v1/vton/result"
+RESULT_CALLBACK_URL="http://35.154.214.159:9009/v1/vton/result"
 
 # Load balancer base URL - for job completion notifications (base URL only, NOT including /job_complete)
 # The server automatically appends /job_complete to this URL
-# Example: If you set "http://3.109.202.177:9005", the server will POST to "http://3.109.202.177:9005/job_complete"
-JOB_COMPLETE_CALLBACK_URL="http://3.109.202.177:9005"
+# Example: If you set "http://35.154.214.159:9005", the server will POST to "http://35.154.214.159:9005/job_complete"
+JOB_COMPLETE_CALLBACK_URL="http://35.154.214.159:9005"
 
 # GPU Node ID - Unique identifier for this GPU server instance
 # ESSENTIAL for load balancer: Used to identify which GPU node processed each job
