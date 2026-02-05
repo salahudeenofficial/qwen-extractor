@@ -95,15 +95,30 @@ class PrepareInputsStep(WorkflowStep):
         except:
             pass
 
+        # Check for AVIF signature
+        is_avif = b'ftypavif' in context.input_image_data[:20] or b'ftypmif1' in context.input_image_data[:20]
+
         # Validate image data before saving
         try:
             import io
+            # Register AVIF plugin if installed (just by importing it)
+            try:
+                import pillow_avif
+            except ImportError:
+                pass
+            
             # Try opening from bytes to verify it's a valid image
             img = Image.open(io.BytesIO(context.input_image_data))
             img.verify()  # Check if it's broken
             print(f"DEBUG: Image verified. Format: {img.format}, Size: {img.size}, Mode: {img.mode}")
         except Exception as e:
             print(f"ERROR: Invalid image data: {e}")
+            
+            if is_avif:
+                 error_msg = "AVIF image format detected but could not be decoded. Please install 'pillow-avif-plugin' (via pip) or convert the image to PNG/JPG before uploading."
+                 print(f"ERROR: {error_msg}")
+                 raise ValueError(error_msg)
+
             if data_len < 1000:
                 try:
                     print(f"DEBUG: Content as text: {context.input_image_data.decode('utf-8')}")
@@ -118,11 +133,14 @@ class PrepareInputsStep(WorkflowStep):
         # Use the original format if detected, or generic extension
         ext = ".png"
         try:
+             # Re-open stream since verify() consumes it
              img = Image.open(io.BytesIO(context.input_image_data))
              if img.format:
                  ext = f".{img.format.lower()}"
         except:
-            pass
+             if is_avif:
+                 ext = ".avif"
+             pass
 
         input_path = os.path.join(context.temp_dir, f"input{ext}")
         with open(input_path, 'wb') as f:

@@ -22,3 +22,7 @@ pydantic>=2.5.0
 # These should be installed via requirements.txt in parent directory
 # torch>=2.6.0
 # Pillow>=10.0.0
+
+# Image format support
+pillow-avif-plugin>=0.1.0
+pillow-heif>=0.16.0
