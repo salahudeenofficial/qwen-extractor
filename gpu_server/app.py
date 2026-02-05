@@ -541,7 +541,11 @@ async def infer(
     try:
         # Read image data
         image_data = await image.read()
+        logger.info(f"debug: received image '{image.filename}' with size {len(image_data)} bytes")
         
+        if len(image_data) == 0:
+            raise HTTPException(status_code=400, detail="Uploaded image is empty")
+
         # Create job context
         context = JobContext(
             job_id=job_id,

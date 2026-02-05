@@ -84,11 +84,35 @@ class PrepareInputsStep(WorkflowStep):
         return "PrepareInputs"
     
     def execute(self, context: JobContext) -> JobContext:
+        print(f"DEBUG: PrepareInputsStep received {len(context.input_image_data)} bytes")
+        if len(context.input_image_data) < 100:
+             print(f"DEBUG: First 20 bytes: {context.input_image_data[:20]}")
+
+        # Validate image data before saving
+        try:
+            import io
+            # Try opening from bytes to verify it's a valid image
+            img = Image.open(io.BytesIO(context.input_image_data))
+            img.verify()  # Check if it's broken
+            print(f"DEBUG: Image verified. Format: {img.format}, Size: {img.size}, Mode: {img.mode}")
+        except Exception as e:
+            print(f"ERROR: Invalid image data: {e}")
+            raise ValueError(f"Uploaded file is not a valid image: {e}")
+
         # Create temp directory
         context.temp_dir = tempfile.mkdtemp(prefix=f"vton_{context.job_id}_")
         
         # Save input image
-        input_path = os.path.join(context.temp_dir, "input.png")
+        # Use the original format if detected, or generic extension
+        ext = ".png"
+        try:
+             img = Image.open(io.BytesIO(context.input_image_data))
+             if img.format:
+                 ext = f".{img.format.lower()}"
+        except:
+            pass
+
+        input_path = os.path.join(context.temp_dir, f"input{ext}")
         with open(input_path, 'wb') as f:
             f.write(context.input_image_data)
         context.input_image_path = input_path
