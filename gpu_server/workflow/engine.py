@@ -28,8 +28,7 @@ class JobContext:
     provider: str
     
     # Input data
-    masked_user_image_data: bytes
-    garment_image_data: bytes
+    input_image_data: bytes
     
     # Config from request
     seed: int = 42
@@ -39,8 +38,7 @@ class JobContext:
     
     # Processing state
     temp_dir: Optional[str] = None
-    person_image_path: Optional[str] = None
-    garment_image_path: Optional[str] = None
+    input_image_path: Optional[str] = None
     output_image_path: Optional[str] = None
     
     # Results
@@ -89,17 +87,11 @@ class PrepareInputsStep(WorkflowStep):
         # Create temp directory
         context.temp_dir = tempfile.mkdtemp(prefix=f"vton_{context.job_id}_")
         
-        # Save person image
-        person_path = os.path.join(context.temp_dir, "person.png")
-        with open(person_path, 'wb') as f:
-            f.write(context.masked_user_image_data)
-        context.person_image_path = person_path
-        
-        # Save garment image
-        garment_path = os.path.join(context.temp_dir, "garment.png")
-        with open(garment_path, 'wb') as f:
-            f.write(context.garment_image_data)
-        context.garment_image_path = garment_path
+        # Save input image
+        input_path = os.path.join(context.temp_dir, "input.png")
+        with open(input_path, 'wb') as f:
+            f.write(context.input_image_data)
+        context.input_image_path = input_path
         
         # Set output path
         context.output_image_path = os.path.join(context.temp_dir, "output.png")
@@ -124,9 +116,9 @@ class ResizeImagesStep(WorkflowStep):
     def execute(self, context: JobContext) -> JobContext:
         target_short = self.res_map.get(self.resolution, 720)
         
-        # Load and resize person image
-        person_img = Image.open(context.person_image_path)
-        w, h = person_img.size
+        # Load and resize input image
+        input_img = Image.open(context.input_image_path)
+        w, h = input_img.size
         aspect_ratio = w / h
         
         if w >= h:
@@ -141,30 +133,13 @@ class ResizeImagesStep(WorkflowStep):
         target_height = (target_height // 16) * 16
         
         # Resize and save
-        person_resized = person_img.resize((target_width, target_height), Image.LANCZOS)
-        person_resized.save(context.person_image_path)
+        input_resized = input_img.resize((target_width, target_height), Image.LANCZOS)
+        input_resized.save(context.input_image_path)
         
         # Store resolution in metadata
         context.metadata["target_width"] = target_width
         context.metadata["target_height"] = target_height
         context.metadata["aspect_ratio"] = aspect_ratio
-        
-        # Resize garment proportionally
-        garment_img = Image.open(context.garment_image_path)
-        garment_ratio = garment_img.width / garment_img.height
-        
-        if garment_ratio > aspect_ratio:
-            garment_w = target_width
-            garment_h = int(target_width / garment_ratio)
-        else:
-            garment_h = target_height
-            garment_w = int(target_height * garment_ratio)
-        
-        garment_w = max(16, (garment_w // 16) * 16)
-        garment_h = max(16, (garment_h // 16) * 16)
-        
-        garment_resized = garment_img.resize((garment_w, garment_h), Image.LANCZOS)
-        garment_resized.save(context.garment_image_path)
         
         return context
 
@@ -185,8 +160,7 @@ class InferenceStep(WorkflowStep):
         try:
             # Run inference using the pipeline manager
             self.pipeline_manager.run_inference(
-                person_image_path=context.person_image_path,
-                garment_image_path=context.garment_image_path,
+                input_image_path=context.input_image_path,
                 output_path=context.output_image_path,
                 seed=context.seed,
                 steps=context.steps,

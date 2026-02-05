@@ -22,21 +22,32 @@ if str(SCRIPT_DIR) not in sys.path:
 
 
 # Virtual Try-On Prompts
-VTON_PROMPT_CN = """将图片 1 中的绿色遮罩区域仅用于判断服装属于上半身或下半身，不要将服装限制在遮罩范围内。
+# Virtual Try-On Prompts
+VTON_PROMPT_CN = """执行图像编辑操作：删除并移除人物及配饰。
+将人物、人体区域以及所有配饰完全擦除、清空、不可见。
 
-将图片 2 中的服装自然地穿戴到图片 1 中的人物身上，保持图片 2 中服装的完整形状、袖长和轮廓。无论图片 2 是单独的服装图还是人物穿着该服装的图，都应准确地转移服装，同时保留其原始面料质感、材质细节和颜色准确性。
+严禁出现任何人体或人体部位。
+包括但不限于：
+人、模特、身体、皮肤、腿、脚、脚踝、手、手臂、手指、头部、脸部、头发、颈部、肩膀、躯干、人体轮廓、人体阴影。
 
-确保图片 1 中人物的面部、头发和皮肤完全保持不变。光照与阴影应自然匹配图片 1 的环境，但服装的材质外观必须忠实于图片 2。
+严禁出现任何配饰或附属物。
+包括但不限于：
+鞋子、袜子、帽子、眼镜、墨镜、围巾、手套、腰带、首饰、项链、耳环、戒指、手表、包、背包、手提包、钱包、钥匙、耳机、发饰。
 
-保持边缘平滑融合、阴影逼真，整体效果自然且不改变人物的身份特征。"""
+仅保留完整整套核心服装（上衣、下装、外套）。
+不包含任何配饰或穿戴附属物。
 
-VTON_PROMPT_EN = """Use the green mask area in image 1 only to determine if the garment belongs to upper or lower body, do not restrict the garment to the mask area.
+服装必须以无人体支撑的形式展示（悬浮或平铺）。
 
-Naturally dress the person in image 1 with the garment from image 2, maintaining the complete shape, sleeve length, and silhouette of the garment from image 2. Whether image 2 shows the garment alone or on a model, accurately transfer the garment while preserving its original fabric texture, material details, and color accuracy.
+颜色与输入图像必须 100% 完全一致。
+不允许任何颜色变化、色相偏移、饱和度变化或亮度变化。
+保留原始面料纹理、材质和图案。
 
-Ensure the face, hair, and skin of the person in image 1 remain completely unchanged. Lighting and shadows should naturally match the environment of image 1, but the material appearance of the garment must stay faithful to image 2.
+背景必须为纯白色。
 
-Keep edges smoothly blended, shadows realistic, and the overall effect natural without altering the person's identity features."""
+如检测到人体或配饰残留，必须继续删除，仅保留核心服装。"""
+
+VTON_PROMPT_EN = VTON_PROMPT_CN
 
 
 class PipelineManager:
@@ -326,20 +337,16 @@ class PipelineManager:
         
         try:
             # Create small dummy images
-            person = Image.new("RGB", (512, 768), color=(0, 255, 0))
-            garment = Image.new("RGB", (512, 512), color=(255, 255, 255))
+            input_img = Image.new("RGB", (512, 768), color=(0, 255, 0))
             
-            person_path = os.path.join(temp_dir, "warmup_person.png")
-            garment_path = os.path.join(temp_dir, "warmup_garment.png")
+            input_path = os.path.join(temp_dir, "warmup_input.png")
             output_path = os.path.join(temp_dir, "warmup_output.png")
             
-            person.save(person_path)
-            garment.save(garment_path)
+            input_img.save(input_path)
             
             # Run inference
             self.run_inference(
-                person_image_path=person_path,
-                garment_image_path=garment_path,
+                input_image_path=input_path,
                 output_path=output_path,
                 seed=42,
                 steps=self.steps,
@@ -354,8 +361,7 @@ class PipelineManager:
     
     def run_inference(
         self,
-        person_image_path: str,
-        garment_image_path: str,
+        input_image_path: str,
         output_path: str,
         seed: int = 42,
         steps: Optional[int] = None,
@@ -375,10 +381,10 @@ class PipelineManager:
             prompt = VTON_PROMPT_CN
         
         # Detect aspect ratio from input image
-        person_img = Image.open(person_image_path)
-        orig_w, orig_h = person_img.size
+        input_img = Image.open(input_image_path)
+        orig_w, orig_h = input_img.size
         orig_ratio = orig_w / orig_h
-        person_img.close()
+        input_img.close()
         
         # Determine aspect_ratio for LightX2V
         if orig_ratio < 0.8:  # Portrait
@@ -395,7 +401,7 @@ class PipelineManager:
             self.teacache_infer.clear()
         
         # Prepare image paths (comma-separated for LightX2V)
-        image_paths = f"{person_image_path},{garment_image_path}"
+        image_paths = input_image_path
         
         # Monkey-patch run_pipeline to inject aspect_ratio into input_info
         # This is needed because LightX2V's get_custom_shape() checks input_info.aspect_ratio

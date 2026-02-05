@@ -9,8 +9,7 @@
 const state = {
     serverUrl: 'http://localhost:8080',
     authToken: '',
-    personFile: null,
-    garmentFile: null,
+    inputFile: null,
     resultBlob: null,
     isProcessing: false,
     serverStatus: 'unknown',
@@ -41,8 +40,7 @@ function initializeApp() {
     }
 
     // Set up drag and drop
-    setupDragAndDrop('personUploadZone', 'person');
-    setupDragAndDrop('garmentUploadZone', 'garment');
+    setupDragAndDrop('inputUploadZone', 'input');
 
     // Check server status
     checkServerStatus();
@@ -151,11 +149,7 @@ function processFile(file, type) {
     }
 
     // Store file
-    if (type === 'person') {
-        state.personFile = file;
-    } else {
-        state.garmentFile = file;
-    }
+    state.inputFile = file;
 
     // Show preview
     const reader = new FileReader();
@@ -173,13 +167,8 @@ function processFile(file, type) {
 }
 
 function clearUpload(type) {
-    if (type === 'person') {
-        state.personFile = null;
-        document.getElementById('personInput').value = '';
-    } else {
-        state.garmentFile = null;
-        document.getElementById('garmentInput').value = '';
-    }
+    state.inputFile = null;
+    document.getElementById('inputInput').value = '';
 
     const previewEl = document.getElementById(`${type}Preview`);
     const placeholderEl = document.getElementById(`${type}Placeholder`);
@@ -202,12 +191,8 @@ function randomizeSeed() {
 
 async function runInference() {
     // Validate inputs
-    if (!state.personFile) {
-        showError('Please upload a person image');
-        return;
-    }
-    if (!state.garmentFile) {
-        showError('Please upload a garment image');
+    if (!state.inputFile) {
+        showError('Please upload an input image');
         return;
     }
 
@@ -233,8 +218,7 @@ async function runInference() {
 
     // Create form data
     const formData = new FormData();
-    formData.append('masked_user_image', state.personFile);
-    formData.append('garment_image', state.garmentFile);
+    formData.append('image', state.inputFile);
     formData.append('seed', seed);
     formData.append('steps', steps);
     formData.append('cfg', cfg);

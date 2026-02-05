@@ -43,8 +43,7 @@ class MockPipelineManager:
     
     def run_inference(
         self,
-        person_image_path: str,
-        garment_image_path: str,
+        input_image_path: str,
         output_path: str,
         seed: int = 42,
         steps: Optional[int] = None,
@@ -56,37 +55,28 @@ class MockPipelineManager:
         """
         Create a mock result image.
         
-        Combines the person and garment images with text overlay.
+        Shows the input image with text overlay.
         """
         print(f"🎭 Mock: Running mock inference...")
-        print(f"   Person: {person_image_path}")
-        print(f"   Garment: {garment_image_path}")
+        print(f"   Input: {input_image_path}")
         print(f"   Seed: {seed}, Steps: {steps or self.steps}")
         
         # Simulate processing time
         time.sleep(0.5)
         
         # Load images
-        person_img = Image.open(person_image_path).convert("RGB")
-        garment_img = Image.open(garment_image_path).convert("RGB")
+        input_img = Image.open(input_image_path).convert("RGB")
         
         # Get dimensions
-        width = target_width or person_img.width
-        height = target_height or person_img.height
+        width = target_width or input_img.width
+        height = target_height or input_img.height
         
         # Create output image
         result = Image.new("RGB", (width, height), color=(30, 30, 40))
         
-        # Resize and paste person image (left side)
-        person_resized = person_img.resize((width // 2, height), Image.LANCZOS)
-        result.paste(person_resized, (0, 0))
-        
-        # Resize and paste garment image (top right)
-        garment_aspect = garment_img.width / garment_img.height
-        garment_w = width // 2
-        garment_h = int(garment_w / garment_aspect)
-        garment_resized = garment_img.resize((garment_w, garment_h), Image.LANCZOS)
-        result.paste(garment_resized, (width // 2, height // 4))
+        # Resize and paste input image
+        input_resized = input_img.resize((width, height), Image.LANCZOS)
+        result.paste(input_resized, (0, 0))
         
         # Add text overlay
         draw = ImageDraw.Draw(result)
@@ -99,7 +89,7 @@ class MockPipelineManager:
             font_small = font
         
         # Title
-        draw.text((width // 2 + 10, 10), "MOCK RESULT", fill=(255, 100, 100), font=font)
+        draw.text((width // 2 - 80, height // 2 - 50), "MOCK EXTRACTED RESULT", fill=(255, 100, 100), font=font)
         
         # Info
         info_y = height - 100

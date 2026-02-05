@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VTON Inference Tester | Virtual Try-On</title>
-    <meta name="description" content="Test the Virtual Try-On GPU inference server with an intuitive interface">
+    <title>Outfit Extractor | Virtual Try-On</title>
+    <meta name="description" content="Test the Outfit Extractor GPU inference server with an intuitive interface">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
             <div class="header-content">
                 <div class="logo">
                     <span class="logo-icon">👗</span>
-                    <span class="logo-text">VTON Tester</span>
+                    <span class="logo-text">Outfit Extractor</span>
                 </div>
                 <div class="server-status" id="serverStatus">
                     <span class="status-dot status-checking"></span>
@@ -52,45 +52,24 @@
 
             <!-- Upload Section -->
             <section class="upload-section">
-                <div class="upload-grid">
-                    <!-- Person Image Upload -->
+                <div class="upload-grid" style="grid-template-columns: 1fr; max-width: 600px; margin: 0 auto;">
+                    <!-- Input Image Upload -->
                     <div class="upload-card glass-card">
                         <h3 class="upload-title">
-                            <span class="icon">👤</span>
-                            Person Image
+                            <span class="icon">🖼️</span>
+                            Input Image
                         </h3>
-                        <p class="upload-description">Upload a masked person image (with green mask on clothing area)</p>
-                        <div class="upload-zone" id="personUploadZone" onclick="document.getElementById('personInput').click()">
-                            <input type="file" id="personInput" accept="image/*" hidden onchange="handleFileUpload(event, 'person')">
-                            <div class="upload-placeholder" id="personPlaceholder">
+                        <p class="upload-description">Upload an image to extract the outfit from</p>
+                        <div class="upload-zone" id="inputUploadZone" onclick="document.getElementById('inputInput').click()">
+                            <input type="file" id="inputInput" accept="image/*" hidden onchange="handleFileUpload(event, 'input')">
+                            <div class="upload-placeholder" id="inputPlaceholder">
                                 <span class="upload-icon">📁</span>
                                 <span class="upload-text">Click or drag to upload</span>
                                 <span class="upload-hint">PNG, JPG (max 10MB)</span>
                             </div>
-                            <img id="personPreview" class="upload-preview hidden" alt="Person preview">
+                            <img id="inputPreview" class="upload-preview hidden" alt="Input preview">
                         </div>
-                        <button class="btn btn-small btn-danger hidden" id="personClear" onclick="clearUpload('person')">
-                            Clear
-                        </button>
-                    </div>
-
-                    <!-- Garment Image Upload -->
-                    <div class="upload-card glass-card">
-                        <h3 class="upload-title">
-                            <span class="icon">👕</span>
-                            Garment Image
-                        </h3>
-                        <p class="upload-description">Upload the garment/clothing to try on</p>
-                        <div class="upload-zone" id="garmentUploadZone" onclick="document.getElementById('garmentInput').click()">
-                            <input type="file" id="garmentInput" accept="image/*" hidden onchange="handleFileUpload(event, 'garment')">
-                            <div class="upload-placeholder" id="garmentPlaceholder">
-                                <span class="upload-icon">📁</span>
-                                <span class="upload-text">Click or drag to upload</span>
-                                <span class="upload-hint">PNG, JPG (max 10MB)</span>
-                            </div>
-                            <img id="garmentPreview" class="upload-preview hidden" alt="Garment preview">
-                        </div>
-                        <button class="btn btn-small btn-danger hidden" id="garmentClear" onclick="clearUpload('garment')">
+                        <button class="btn btn-small btn-danger hidden" id="inputClear" onclick="clearUpload('input')">
                             Clear
                         </button>
                     </div>

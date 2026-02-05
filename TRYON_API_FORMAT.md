@@ -35,15 +35,10 @@ X-Internal-Auth: <your-auth-token>
 - Valid values: `"qwen"` or `"lightxv"`
 - Example: `"qwen"`
 
-### 5. `masked_user_image` (file, required)
-- Person image file (PNG or JPEG)
+### 5. `image` (file, required)
+- Input image file (PNG or JPEG)
 - Must be uploaded as a file in multipart form
-- Example: `File("person.png", image_bytes, "image/png")`
-
-### 6. `garment_image` (file, required)
-- Garment/clothing image file (PNG or JPEG)
-- Must be uploaded as a file in multipart form
-- Example: `File("garment.png", image_bytes, "image/png")`
+- Example: `File("input.png", image_bytes, "image/png")`
 
 ### 7. `config` (string, required - JSON format)
 - Inference configuration as JSON string
@@ -66,8 +61,7 @@ curl -X POST "http://localhost:8000/tryon" \
   -F "session_id=session-xyz789" \
   -F "provider=qwen" \
   -F "config={\"seed\": 42, \"steps\": 4, \"cfg\": 1.0}" \
-  -F "masked_user_image=@person.png" \
-  -F "garment_image=@garment.png"
+  -F "image=@input.png"
 ```
 
 ## Example Request (Python)
@@ -89,8 +83,7 @@ data = {
 }
 
 files = {
-    "masked_user_image": ("person.png", open("person.png", "rb"), "image/png"),
-    "garment_image": ("garment.png", open("garment.png", "rb"), "image/png")
+    "image": ("input.png", open("input.png", "rb"), "image/png")
 }
 
 response = requests.post(url, headers=headers, data=data, files=files)

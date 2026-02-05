@@ -44,21 +44,31 @@ if torch.cuda.is_available():
 
 
 # Virtual Try-On Prompts
-VTON_PROMPT_CN = """将图片 1 中的绿色遮罩区域仅用于判断服装属于上半身或下半身，不要将服装限制在遮罩范围内。
+VTON_PROMPT_CN = """执行图像编辑操作：删除并移除人物及配饰。
+将人物、人体区域以及所有配饰完全擦除、清空、不可见。
 
-将图片 2 中的服装自然地穿戴到图片 1 中的人物身上，保持图片 2 中服装的完整形状、袖长和轮廓。无论图片 2 是单独的服装图还是人物穿着该服装的图，都应准确地转移服装，同时保留其原始面料质感、材质细节和颜色准确性。
+严禁出现任何人体或人体部位。
+包括但不限于：
+人、模特、身体、皮肤、腿、脚、脚踝、手、手臂、手指、头部、脸部、头发、颈部、肩膀、躯干、人体轮廓、人体阴影。
 
-确保图片 1 中人物的面部、头发和皮肤完全保持不变。光照与阴影应自然匹配图片 1 的环境，但服装的材质外观必须忠实于图片 2。
+严禁出现任何配饰或附属物。
+包括但不限于：
+鞋子、袜子、帽子、眼镜、墨镜、围巾、手套、腰带、首饰、项链、耳环、戒指、手表、包、背包、手提包、钱包、钥匙、耳机、发饰。
 
-保持边缘平滑融合、阴影逼真，整体效果自然且不改变人物的身份特征。"""
+仅保留完整整套核心服装（上衣、下装、外套）。
+不包含任何配饰或穿戴附属物。
 
-VTON_PROMPT_EN = """Use the green mask area in image 1 only to determine if the garment belongs to upper or lower body, do not restrict the garment to the mask area.
+服装必须以无人体支撑的形式展示（悬浮或平铺）。
 
-Naturally dress the person in image 1 with the garment from image 2, maintaining the complete shape, sleeve length, and silhouette of the garment from image 2. Whether image 2 shows the garment alone or on a model, accurately transfer the garment while preserving its original fabric texture, material details, and color accuracy.
+颜色与输入图像必须 100% 完全一致。
+不允许任何颜色变化、色相偏移、饱和度变化或亮度变化。
+保留原始面料纹理、材质和图案。
 
-Ensure the face, hair, and skin of the person in image 1 remain completely unchanged. Lighting and shadows should naturally match the environment of image 1, but the material appearance of the garment must stay faithful to image 2.
+背景必须为纯白色。
 
-Keep edges smoothly blended, shadows realistic, and the overall effect natural without altering the person's identity features."""
+如检测到人体或配饰残留，必须继续删除，仅保留核心服装。"""
+
+VTON_PROMPT_EN = VTON_PROMPT_CN
 
 
 def check_cuda():
@@ -140,12 +150,12 @@ def find_fp8_path():
     return None
 
 
-def calculate_720p_resolution(person_image_path: str):
+def calculate_720p_resolution(input_image_path: str):
     """
     Calculate 720p output resolution maintaining input aspect ratio.
     720p = 720 pixels on the shorter side.
     """
-    img = Image.open(person_image_path)
+    img = Image.open(input_image_path)
     width, height = img.size
     aspect_ratio = width / height
     
@@ -167,8 +177,7 @@ def calculate_720p_resolution(person_image_path: str):
 
 
 def run_lightx2v_vton(
-    person_image_path: str,
-    cloth_image_path: str,
+    input_image_path: str,
     output_path: str,
     mode: str = "lora",  # "lora", "fp8", or "base"
     enable_offload: bool = False,
@@ -185,8 +194,7 @@ def run_lightx2v_vton(
     Run Virtual Try-On using LightX2V framework.
     
     Args:
-        person_image_path: Path to person image (with green mask)
-        cloth_image_path: Path to cloth/garment image
+        input_image_path: Path to input image
         output_path: Path to save output
         mode: "lora" for BF16+LoRA, "fp8" for FP8+distillation, "base" for 40-step base
         enable_offload: Enable CPU offloading for low VRAM
@@ -203,7 +211,7 @@ def run_lightx2v_vton(
     
     # Calculate 720p resolution if not specified
     if target_width is None or target_height is None:
-        target_width, target_height, aspect_ratio = calculate_720p_resolution(person_image_path)
+        target_width, target_height, aspect_ratio = calculate_720p_resolution(input_image_path)
         print(f"\n📐 Auto-calculated 720p resolution: {target_width}x{target_height} (AR: {aspect_ratio:.2f})")
     
     print("\n" + "=" * 60)
@@ -326,10 +334,10 @@ def run_lightx2v_vton(
     
     # IMPORTANT: Detect input image aspect ratio BEFORE creating generator
     # to prevent zooming/cropping
-    person_img_check = Image.open(person_image_path)
-    orig_w, orig_h = person_img_check.size
+    input_img_check = Image.open(input_image_path)
+    orig_w, orig_h = input_img_check.size
     orig_ratio = orig_w / orig_h
-    person_img_check.close()
+    input_img_check.close()
     
     # Adjust target dimensions to match input aspect ratio
     if orig_ratio < 1:  # Portrait (taller than wide)
@@ -440,44 +448,24 @@ def run_lightx2v_vton(
     import tempfile
     temp_dir = tempfile.mkdtemp()
     
-    # Resize person image to aspect-ratio-correct dimensions
-    person_img = Image.open(person_image_path)
-    person_resized = person_img.resize((actual_width, actual_height), Image.LANCZOS)
-    person_temp = os.path.join(temp_dir, "person_resized.png")
-    person_resized.save(person_temp)
-    print(f"📐 Person resized to: {actual_width}x{actual_height}")
-    
-    # Resize cloth image proportionally to match person
-    cloth_img = Image.open(cloth_image_path)
-    cloth_ratio = cloth_img.width / cloth_img.height
-    person_ratio = actual_width / actual_height
-    if cloth_ratio > person_ratio:
-        cloth_w = actual_width
-        cloth_h = int(actual_width / cloth_ratio)
-    else:
-        cloth_h = actual_height
-        cloth_w = int(actual_height * cloth_ratio)
-    # Ensure dimensions are at least 16x16
-    cloth_w = max(16, (cloth_w // 16) * 16)
-    cloth_h = max(16, (cloth_h // 16) * 16)
-    cloth_resized = cloth_img.resize((cloth_w, cloth_h), Image.LANCZOS)
-    cloth_temp = os.path.join(temp_dir, "cloth_resized.png")
-    cloth_resized.save(cloth_temp)
-    
-    print(f"📐 Cloth: {cloth_img.width}x{cloth_img.height} → {cloth_w}x{cloth_h}")
+    # Resize input image to aspect-ratio-correct dimensions
+    input_img = Image.open(input_image_path)
+    input_resized = input_img.resize((actual_width, actual_height), Image.LANCZOS)
+    input_temp = os.path.join(temp_dir, "input_resized.png")
+    input_resized.save(input_temp)
+    print(f"📐 Input resized to: {actual_width}x{actual_height}")
     
     # Use resized images
-    image_paths = f"{person_temp},{cloth_temp}"
+    image_paths = input_temp
     
     # Use prompt
     if prompt is None:
         prompt = VTON_PROMPT_CN
     
     print("\n" + "=" * 60)
-    print("👗 Running Virtual Try-On Inference")
+    print("👗 Running Output Extraction Inference")
     print("=" * 60)
-    print(f"Person image: {person_image_path} -> {target_width}x{target_height}")
-    print(f"Cloth image: {cloth_image_path} -> {cloth_w}x{cloth_h}")
+    print(f"Input image: {input_image_path} -> {target_width}x{target_height}")
     print(f"Steps: {steps}")
     print(f"Mode: {mode}")
     print(f"Seed: {seed}")
@@ -522,14 +510,12 @@ def run_lightx2v_vton(
 
 
 def create_comparison_image(
-    person_path: str,
-    cloth_path: str,
+    input_path: str,
     result_path: str,
     output_path: str
 ):
     """Create side-by-side comparison."""
-    person_img = Image.open(person_path).convert("RGB")
-    cloth_img = Image.open(cloth_path).convert("RGB")
+    input_img = Image.open(input_path).convert("RGB")
     result_img = Image.open(result_path).convert("RGB")
     
     target_height = 768
@@ -539,18 +525,15 @@ def create_comparison_image(
         new_width = int(img.width * ratio)
         return img.resize((new_width, height), Image.LANCZOS)
     
-    person_resized = resize_to_height(person_img, target_height)
-    cloth_resized = resize_to_height(cloth_img, target_height)
+    input_resized = resize_to_height(input_img, target_height)
     result_resized = resize_to_height(result_img, target_height)
     
-    total_width = person_resized.width + cloth_resized.width + result_resized.width + 40
+    total_width = input_resized.width + result_resized.width + 30
     comparison = Image.new('RGB', (total_width, target_height + 60), color=(40, 40, 40))
     
     x_offset = 10
-    comparison.paste(person_resized, (x_offset, 50))
-    x_offset += person_resized.width + 10
-    comparison.paste(cloth_resized, (x_offset, 50))
-    x_offset += cloth_resized.width + 10
+    comparison.paste(input_resized, (x_offset, 50))
+    x_offset += input_resized.width + 10
     comparison.paste(result_resized, (x_offset, 50))
     
     try:
@@ -563,10 +546,8 @@ def create_comparison_image(
             font = ImageFont.load_default()
         
         x_offset = 10
-        draw.text((x_offset + person_resized.width//2 - 30, 15), "Person", fill=(255, 255, 255), font=font)
-        x_offset += person_resized.width + 10
-        draw.text((x_offset + cloth_resized.width//2 - 25, 15), "Cloth", fill=(255, 255, 255), font=font)
-        x_offset += cloth_resized.width + 10
+        draw.text((x_offset + input_resized.width//2 - 30, 15), "Input", fill=(255, 255, 255), font=font)
+        x_offset += input_resized.width + 10
         draw.text((x_offset + result_resized.width//2 - 30, 15), "Result", fill=(255, 255, 255), font=font)
     except Exception as e:
         print(f"Note: Could not add labels: {e}")
@@ -595,11 +576,9 @@ Examples:
   python test_lightx2v_vton.py --person my_photo.jpg --cloth my_garment.png --mode fp8
         """
     )
-    parser.add_argument("--person", "-p", type=str, default="person.jpg",
-                        help="Path to person image (with green mask)")
-    parser.add_argument("--cloth", "-c", type=str, default="cloth.png",
-                        help="Path to cloth/garment image")
-    parser.add_argument("--output", "-o", type=str, default="outputs/vton_lightx2v_result.png",
+    parser.add_argument("--input", "-i", type=str, default="input.jpg",
+                        help="Path to input image")
+    parser.add_argument("--output", "-o", type=str, default="outputs/outfit_extractor_result.png",
                         help="Output path for result")
     parser.add_argument("--mode", "-m", type=str, default="lora",
                         choices=["lora", "fp8", "base"],
@@ -637,12 +616,8 @@ Examples:
     check_cuda()
     
     # Validate inputs
-    if not os.path.exists(args.person):
-        print(f"❌ Person image not found: {args.person}")
-        sys.exit(1)
-    
-    if not os.path.exists(args.cloth):
-        print(f"❌ Cloth image not found: {args.cloth}")
+    if not os.path.exists(args.input):
+        print(f"❌ Input image not found: {args.input}")
         sys.exit(1)
     
     # Create output directory
@@ -657,7 +632,7 @@ Examples:
     
     if target_width is None or target_height is None:
         # Auto-calculate based on resolution preset
-        img = Image.open(args.person)
+        img = Image.open(args.input)
         w, h = img.size
         aspect_ratio = w / h
         
@@ -681,8 +656,7 @@ Examples:
     
     # Run inference
     result_path, inference_time = run_lightx2v_vton(
-        person_image_path=args.person,
-        cloth_image_path=args.cloth,
+        input_image_path=args.input,
         output_path=args.output,
         mode=args.mode,
         enable_offload=args.offload,
@@ -698,7 +672,7 @@ Examples:
     # Create comparison
     if not args.no_comparison:
         comparison_path = args.output.replace(".png", "_comparison.png")
-        create_comparison_image(args.person, args.cloth, result_path, comparison_path)
+        create_comparison_image(args.input, result_path, comparison_path)
     
     # Summary
     print("\n" + "=" * 60)

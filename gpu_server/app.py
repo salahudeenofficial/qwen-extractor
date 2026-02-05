@@ -420,8 +420,7 @@ async def tryon(
     user_id: str = Form(...),
     session_id: str = Form(...),
     provider: str = Form(...),
-    masked_user_image: UploadFile = File(...),
-    garment_image: UploadFile = File(...),
+    image: UploadFile = File(...),
     config: str = Form(...),
     x_internal_auth: Optional[str] = Header(None),
 ):
@@ -469,8 +468,7 @@ async def tryon(
         prompt = job_config.get("prompt", None)  # Optional prompt from config
         
         # Read image data
-        masked_user_image_data = await masked_user_image.read()
-        garment_image_data = await garment_image.read()
+        image_data = await image.read()
         
         # Create job context
         context = JobContext(
@@ -478,8 +476,7 @@ async def tryon(
             user_id=user_id,
             session_id=session_id,
             provider=provider,
-            masked_user_image_data=masked_user_image_data,
-            garment_image_data=garment_image_data,
+            input_image_data=image_data,
             seed=seed,
             steps=steps,
             cfg=cfg,
@@ -511,8 +508,7 @@ async def tryon(
 
 @app.post("/infer")
 async def infer(
-    masked_user_image: UploadFile = File(...),
-    garment_image: UploadFile = File(...),
+    image: UploadFile = File(...),
     seed: int = Form(42),
     steps: int = Form(4),
     cfg: float = Form(1.0),
@@ -544,8 +540,7 @@ async def infer(
     
     try:
         # Read image data
-        masked_user_image_data = await masked_user_image.read()
-        garment_image_data = await garment_image.read()
+        image_data = await image.read()
         
         # Create job context
         context = JobContext(
@@ -553,8 +548,7 @@ async def infer(
             user_id="frontend",
             session_id="direct",
             provider="qwen",
-            masked_user_image_data=masked_user_image_data,
-            garment_image_data=garment_image_data,
+            input_image_data=image_data,
             seed=seed,
             steps=steps,
             cfg=cfg,
