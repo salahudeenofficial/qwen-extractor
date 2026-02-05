@@ -84,9 +84,16 @@ class PrepareInputsStep(WorkflowStep):
         return "PrepareInputs"
     
     def execute(self, context: JobContext) -> JobContext:
-        print(f"DEBUG: PrepareInputsStep received {len(context.input_image_data)} bytes")
-        if len(context.input_image_data) < 100:
-             print(f"DEBUG: First 20 bytes: {context.input_image_data[:20]}")
+        data_len = len(context.input_image_data)
+        print(f"DEBUG: PrepareInputsStep received {data_len} bytes")
+        
+        # Log first 50 bytes to identify file signature
+        header = context.input_image_data[:50]
+        print(f"DEBUG: Header (Hex): {header.hex(' ')}")
+        try:
+            print(f"DEBUG: Header (Text): {header.decode('utf-8', errors='replace')}")
+        except:
+            pass
 
         # Validate image data before saving
         try:
@@ -97,6 +104,11 @@ class PrepareInputsStep(WorkflowStep):
             print(f"DEBUG: Image verified. Format: {img.format}, Size: {img.size}, Mode: {img.mode}")
         except Exception as e:
             print(f"ERROR: Invalid image data: {e}")
+            if data_len < 1000:
+                try:
+                    print(f"DEBUG: Content as text: {context.input_image_data.decode('utf-8')}")
+                except:
+                    pass
             raise ValueError(f"Uploaded file is not a valid image: {e}")
 
         # Create temp directory
