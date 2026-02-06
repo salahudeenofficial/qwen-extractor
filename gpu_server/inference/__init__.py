@@ -6,7 +6,7 @@ Provides the pipeline manager for VTON inference.
 
 import os
 
-from .pipeline_manager import PipelineManager, VTON_PROMPT_CN, VTON_PROMPT_EN
+from .pipeline_manager import PipelineManager, CATEGORY_PROMPTS
 from .mock_pipeline import MockPipelineManager
 
 
@@ -27,6 +27,5 @@ __all__ = [
     "PipelineManager",
     "MockPipelineManager",
     "get_pipeline_manager",
-    "VTON_PROMPT_CN",
-    "VTON_PROMPT_EN",
+    "CATEGORY_PROMPTS",
 ]

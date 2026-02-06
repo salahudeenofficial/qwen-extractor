@@ -21,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from core.config import GPUServerConfig, load_config, get_config, set_config
-from inference import get_pipeline_manager
+from inference import get_pipeline_manager, CATEGORY_PROMPTS
 from workflow.engine import JobContext, create_default_workflow
 
 
@@ -512,6 +512,7 @@ async def infer(
     seed: int = Form(42),
     steps: int = Form(10),
     cfg: float = Form(1.0),
+    category: str = Form("dress"),
     prompt: Optional[str] = Form(None),
     x_internal_auth: Optional[str] = Header(None),
 ):
@@ -533,6 +534,14 @@ async def infer(
     if state.busy:
         raise HTTPException(status_code=429, detail="GPU is busy")
     
+    # Validate category
+    if category not in CATEGORY_PROMPTS:
+        raise HTTPException(status_code=400, detail=f"Invalid category: {category}. Must be one of {list(CATEGORY_PROMPTS.keys())}")
+
+    # Determine prompt
+    if prompt is None:
+        prompt = CATEGORY_PROMPTS[category]
+
     # Mark GPU as busy
     state.busy = True
     job_id = str(uuid.uuid4())
@@ -541,7 +550,7 @@ async def infer(
     try:
         # Read image data
         image_data = await image.read()
-        logger.info(f"debug: received image '{image.filename}' with size {len(image_data)} bytes")
+        logger.info(f"debug: received image '{image.filename}' with size {len(image_data)} bytes. Category: {category}")
         
         if len(image_data) == 0:
             raise HTTPException(status_code=400, detail="Uploaded image is empty")
