@@ -30,7 +30,7 @@ model:
   
   # Inference settings
   default_mode: "fp8"             # Default mode: "fp8", "lora", or "base"
-  default_steps: 4                # Default inference steps
+  default_steps: 10               # Default inference steps
   default_seed: 42                # Default random seed
   default_cfg: 1.0                # Default guidance scale
   

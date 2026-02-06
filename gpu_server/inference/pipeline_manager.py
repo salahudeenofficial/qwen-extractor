@@ -239,7 +239,7 @@ class PipelineManager:
                         dit_quantized_ckpt=self.fp8_path,
                         quant_scheme="fp8-sgl"
                     )
-                    self.steps = 4
+                    self.steps = self.config.model.default_steps
                 else:
                     raise RuntimeError(
                         "FP8 weights not found! Please download with:\n"
@@ -254,7 +254,7 @@ class PipelineManager:
                     self.pipe.enable_lora([
                         {"path": self.lora_path, "strength": 1.0},
                     ])
-                    self.steps = 4
+                    self.steps = self.config.model.default_steps
                 else:
                     raise RuntimeError("LoRA weights not found!")
             

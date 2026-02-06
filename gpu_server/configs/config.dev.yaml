@@ -28,7 +28,7 @@ model:
   model_version: "1.0.0-dev"
   device: "cuda"
   default_mode: "fp8"
-  default_steps: 4
+  default_steps: 10
   default_seed: 42
   default_cfg: 1.0
   default_resolution: "720p"

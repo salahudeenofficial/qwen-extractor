@@ -32,7 +32,7 @@ class JobContext:
     
     # Config from request
     seed: int = 42
-    steps: int = 4
+    steps: int = 10
     cfg: float = 1.0
     prompt: Optional[str] = None
     

@@ -510,7 +510,7 @@ async def tryon(
 async def infer(
     image: UploadFile = File(...),
     seed: int = Form(42),
-    steps: int = Form(4),
+    steps: int = Form(10),
     cfg: float = Form(1.0),
     prompt: Optional[str] = Form(None),
     x_internal_auth: Optional[str] = Header(None),
